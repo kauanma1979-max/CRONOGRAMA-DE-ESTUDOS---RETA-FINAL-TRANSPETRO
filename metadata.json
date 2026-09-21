@@ -1,0 +1,6 @@
+{
+  "name": "Cronograma Pareto Transpetro 2026",
+  "description": "Plano de estudos 80/20 em 3 camadas para Transpetro 2026.3 com rodízio semanal, cronômetro de horas líquidas e backup.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
