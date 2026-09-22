@@ -42,17 +42,61 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
     return dates;
   }, [sessions]);
 
-  // Selected date state (defaults to first date: 2026-09-21)
-  const [selectedDate, setSelectedDate] = useState<string>(uniqueDates[0] || '2026-09-21');
+  // Helper to get today's date in YYYY-MM-DD
+  const getTodayDateStr = (): string => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
+  const todayStr = useMemo(() => getTodayDateStr(), []);
+
+  // Selected date state (defaults to today if in range, otherwise first date: 2026-09-21)
+  const [selectedDate, setSelectedDate] = useState<string>(() => {
+    const today = getTodayDateStr();
+    if (uniqueDates.includes(today)) return today;
+    return uniqueDates[0] || '2026-09-21';
+  });
   const [viewMode, setViewMode] = useState<'daily' | 'weekly'>('daily');
   const [filterDiscipline, setFilterDiscipline] = useState<DisciplineId | 'all'>('all');
 
   // Keep selectedDate in sync if uniqueDates updates
   useEffect(() => {
     if (uniqueDates.length > 0 && !uniqueDates.includes(selectedDate)) {
-      setSelectedDate(uniqueDates[0]);
+      const today = getTodayDateStr();
+      if (uniqueDates.includes(today)) {
+        setSelectedDate(today);
+      } else {
+        setSelectedDate(uniqueDates[0]);
+      }
     }
   }, [uniqueDates, selectedDate]);
+
+  // Handler to switch to Daily view and automatically jump to the current day
+  const handleSelectDailyView = () => {
+    setViewMode('daily');
+    const today = getTodayDateStr();
+    if (uniqueDates.includes(today)) {
+      setSelectedDate(today);
+    } else {
+      const nextPending = sessions.find((s) => !s.completed);
+      if (nextPending && uniqueDates.includes(nextPending.date)) {
+        setSelectedDate(nextPending.date);
+      } else if (uniqueDates.length > 0) {
+        setSelectedDate(uniqueDates[0]);
+      }
+    }
+  };
+
+  // Handler to jump directly to today
+  const handleGoToToday = () => {
+    const today = getTodayDateStr();
+    if (uniqueDates.includes(today)) {
+      setSelectedDate(today);
+    }
+  };
 
   // Find index of selected date
   const selectedDateIdx = uniqueDates.indexOf(selectedDate);
@@ -160,16 +204,26 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
 
             <div className="flex rounded-xl bg-slate-950 p-1 border border-slate-800 text-xs">
               <button
-                onClick={() => setViewMode('daily')}
-                className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
+                id="btn-view-mode-daily"
+                type="button"
+                onClick={handleSelectDailyView}
+                className={`px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 ${
                   viewMode === 'daily'
                     ? 'bg-amber-500 text-slate-950 shadow-sm'
                     : 'text-slate-400 hover:text-white'
                 }`}
+                title="Abrir Visão Diária no dia atual"
               >
-                Visão Diária
+                <span>Visão Diária</span>
+                {selectedDate === todayStr && viewMode === 'daily' && (
+                  <span className="text-[9px] font-black uppercase px-1.5 py-0.2 bg-slate-950 text-amber-300 rounded">
+                    Hoje
+                  </span>
+                )}
               </button>
               <button
+                id="btn-view-mode-weekly"
+                type="button"
                 onClick={() => setViewMode('weekly')}
                 className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
                   viewMode === 'weekly'
@@ -197,9 +251,16 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
           </button>
 
           <div className="flex flex-col">
-            <span className="text-xs uppercase tracking-wider font-bold text-amber-400">
-              {formatDateBrExtended(selectedDate)}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs uppercase tracking-wider font-bold text-amber-400">
+                {formatDateBrExtended(selectedDate)}
+              </span>
+              {selectedDate === todayStr && (
+                <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider bg-emerald-500 text-slate-950 rounded-full shadow-sm">
+                  Hoje
+                </span>
+              )}
+            </div>
             <span className="text-[11px] text-slate-400 font-mono">
               Dia {selectedDateIdx + 1} de {uniqueDates.length} ({selectedDate})
               {isSunday && (
@@ -217,6 +278,21 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
             title="Próximo dia"
           >
             <ChevronRight className="w-4 h-4" />
+          </button>
+
+          {/* Quick jump to Today button */}
+          <button
+            type="button"
+            onClick={handleGoToToday}
+            className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 ml-1 ${
+              selectedDate === todayStr
+                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-sm'
+                : 'bg-slate-800/90 hover:bg-slate-700 text-slate-300 border-slate-700 hover:text-white'
+            }`}
+            title="Ir para o dia atual (Hoje)"
+          >
+            <Calendar className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Hoje</span>
           </button>
         </div>
 
@@ -420,7 +496,10 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
               return (
                 <div
                   key={dateStr}
-                  onClick={() => setSelectedDate(dateStr)}
+                  onClick={() => {
+                    setSelectedDate(dateStr);
+                    setViewMode('daily');
+                  }}
                   className={`cursor-pointer rounded-2xl border p-4 transition-all duration-200 flex flex-col justify-between ${
                     isCurrentSelected
                       ? 'bg-slate-800/90 border-amber-500 shadow-lg shadow-amber-500/10 ring-1 ring-amber-500'
@@ -431,8 +510,15 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                     {/* Day Header */}
                     <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-800">
                       <div>
-                        <div className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                          {WEEKDAY_NAMES_PT[dayOfWeek]}
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                            {WEEKDAY_NAMES_PT[dayOfWeek]}
+                          </span>
+                          {dateStr === todayStr && (
+                            <span className="px-1.5 py-0.2 text-[9px] font-black uppercase bg-emerald-500 text-slate-950 rounded">
+                              Hoje
+                            </span>
+                          )}
                         </div>
                         <div className="text-sm font-extrabold text-white">
                           {d} / {m}
