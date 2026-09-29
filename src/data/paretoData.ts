@@ -643,6 +643,95 @@ export const MICRO_TOPICS: MicroTopic[] = [
   },
 
   // ==========================================
+  // Modalidades de Transporte (ANTT/ANTAQ)
+  // ==========================================
+  {
+    id: 'micro_log_16',
+    mesoTopicId: 'meso_log_5',
+    disciplineId: 'logistica',
+    title: 'Modalidades de Transporte (Intermodalidade e Multimodalidade, ANTT/ANTAQ) — Modais e Matriz de Transportes',
+    keyConcepts:
+      'Características dos modais: Rodoviário (porta a porta, alta flexibilidade), Ferroviário (granéis a longas distâncias, alta eficiência energética), Aquaviário (cabotagem e longo curso), Dutoviário (oleodutos e gasodutos de fluxo contínuo) e Aéreo (alto valor agregado e urgência). Matriz brasileira e custos fixos vs variáveis.',
+    difficulty: 'Fácil',
+    suggestedHours: 2.5,
+    isCorePareto: true,
+  },
+  {
+    id: 'micro_log_17',
+    mesoTopicId: 'meso_log_5',
+    disciplineId: 'logistica',
+    title: 'Modalidades de Transporte (Intermodalidade e Multimodalidade, ANTT/ANTAQ) — Intermodalidade vs Multimodalidade e Regulação',
+    keyConcepts:
+      'Diferença crucial Cesgranrio: Intermodalidade (múltiplos modais com contratos e conhecimentos de transporte independentes) vs Multimodalidade (um único Operador de Transporte Multimodal - OTM e emissão de Conhecimento de Transporte Multimodal). Papel fiscalizador e regulatório da ANTT (terrestre) e ANTAQ (portos e hidrovias).',
+    difficulty: 'Médio',
+    suggestedHours: 2.5,
+    isCorePareto: true,
+  },
+
+  // ==========================================
+  // Armazenagem e WMS
+  // ==========================================
+  {
+    id: 'micro_log_18',
+    mesoTopicId: 'meso_log_6',
+    disciplineId: 'logistica',
+    title: 'Armazenagem (Tipos de armazéns, layout, organização e WMS) — Tipos de Armazéns, Layout e Endereçamento',
+    keyConcepts:
+      'Classificação de armazéns (próprio, contratado/terceirizado e alfandegado/CLIA). Fluxos de layout (linha reta/I, formato em U e em L) e otimização de espaço. Sistemas de endereçamento fixo vs caótico/rotativo e zoneamento por giro ABC de produtos.',
+    difficulty: 'Fácil',
+    suggestedHours: 2.5,
+    isCorePareto: true,
+  },
+  {
+    id: 'micro_log_19',
+    mesoTopicId: 'meso_log_6',
+    disciplineId: 'logistica',
+    title: 'Armazenagem (Tipos de armazéns, layout, organização e WMS) — Sistemas WMS, Picking e Cross-docking',
+    keyConcepts:
+      'Funcionalidades do sistema WMS (Warehouse Management System: controle em tempo real, conferência por código de barras/RFID, cubagem e inventários cíclicos). Métodos de picking (por pedido individual, por lote, por zona e por onda). Operação de Cross-docking (transferência direta doca-a-doca sem armazenagem intermediária).',
+    difficulty: 'Médio',
+    suggestedHours: 2.5,
+    isCorePareto: true,
+  },
+
+  // ==========================================
+  // SCM, Embalagem e Manuseio de Materiais
+  // ==========================================
+  {
+    id: 'micro_log_20',
+    mesoTopicId: 'meso_log_4',
+    disciplineId: 'logistica',
+    title: 'Logística e SCM — Conceitos, Cadeia de Suprimentos Integrada, Logística Reversa e Verde',
+    keyConcepts:
+      'Conceito de SCM (Supply Chain Management), integração entre elos da cadeia e efeito chicote (Bullwhip Effect). Logística reversa (pós-venda e pós-consumo, Política Nacional de Resíduos Sólidos) e práticas de logística verde/sustentabilidade ESG.',
+    difficulty: 'Fácil',
+    suggestedHours: 2.5,
+    isCorePareto: true,
+  },
+  {
+    id: 'micro_log_21',
+    mesoTopicId: 'meso_log_7',
+    disciplineId: 'logistica',
+    title: 'Embalagem e Unitização de Cargas (Pallets, contêineres e sustentabilidade)',
+    keyConcepts:
+      'Funções da embalagem (primária, secundária, terciária). Unitização de cargas: palete padrão brasileiro PBR (1,00m x 1,20m), contêineres padronizados (TEU/FEU) e prevenção de avarias em modais marítimo e rodoviário.',
+    difficulty: 'Fácil',
+    suggestedHours: 2.0,
+    isCorePareto: false,
+  },
+  {
+    id: 'micro_log_22',
+    mesoTopicId: 'meso_log_8',
+    disciplineId: 'logistica',
+    title: 'Manuseio de Materiais / Equipamentos de Movimentação e Automação',
+    keyConcepts:
+      'Equipamentos de movimentação contínua (esteiras transportadoras) e descontínua (empilhadeiras manuais e a combustão/elétricas, pontes rolantes, rebocadores). Automação e veículos guiados automaticamente (AGVs).',
+    difficulty: 'Fácil',
+    suggestedHours: 2.0,
+    isCorePareto: false,
+  },
+
+  // ==========================================
   // Finanças & Contabilidade (4 subtópicos ampliados)
   // ==========================================
   {

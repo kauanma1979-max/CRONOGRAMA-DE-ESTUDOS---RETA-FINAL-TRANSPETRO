@@ -52,8 +52,9 @@ export interface StudySession {
   id: string;
   date: string; // YYYY-MM-DD
   dayOfWeek: number; // 0=Domingo, 1=Segunda, ..., 6=Sábado
-  timeSlot: string; // "18:00 - 19:00" | "20:00 - 21:30" | "21:30 - 23:00" | "20:00 - 21:00" etc.
-  type: 'regular' | 'basic' | 'sunday_review';
+  timeSlot: string; // "18:00 - 19:00" | "20:00 - 21:30" | "21:30 - 23:00" | "09:00 - 10:00" etc.
+  type: 'regular' | 'basic' | 'sunday_review' | 'reta_final';
+  shift?: 'manha' | 'tarde' | 'noite';
   disciplineId: DisciplineId;
   microTopicId?: string;
   title: string;

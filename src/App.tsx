@@ -25,7 +25,7 @@ import {
 import { generateInitialSchedule } from './utils/scheduleGenerator';
 
 export default function App() {
-  const [currentTab, setCurrentTab] = useState<'schedule' | 'pareto' | 'timer' | 'backup'>('schedule');
+  const [currentTab, setCurrentTab] = useState<'schedule' | 'reta_final' | 'pareto' | 'timer' | 'backup'>('schedule');
 
   // Persistence States
   const [sessions, setSessions] = useState<StudySession[]>(() => getStoredSessions());
@@ -309,12 +309,20 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {currentTab === 'schedule' && (
+        {(currentTab === 'schedule' || currentTab === 'reta_final') && (
           <ScheduleView
             sessions={sessions}
             onToggleSessionCompleted={handleToggleSessionCompleted}
             onStartSessionTimer={handleStartSessionTimer}
             completedTopicIds={completedMicroTopicIds}
+            initialViewMode={currentTab === 'reta_final' ? 'reta_final' : 'daily'}
+            onViewModeChange={(mode) => {
+              if (mode === 'reta_final' && currentTab !== 'reta_final') {
+                setCurrentTab('reta_final');
+              } else if (mode !== 'reta_final' && currentTab === 'reta_final') {
+                setCurrentTab('schedule');
+              }
+            }}
           />
         )}
 

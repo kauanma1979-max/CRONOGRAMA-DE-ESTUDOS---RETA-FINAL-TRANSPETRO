@@ -13,8 +13,8 @@ import {
 import { formatSecondsToDigital } from '../utils/scheduleGenerator';
 
 interface HeaderProps {
-  currentTab: 'schedule' | 'pareto' | 'timer' | 'backup';
-  setCurrentTab: (tab: 'schedule' | 'pareto' | 'timer' | 'backup') => void;
+  currentTab: 'schedule' | 'reta_final' | 'pareto' | 'timer' | 'backup';
+  setCurrentTab: (tab: 'schedule' | 'reta_final' | 'pareto' | 'timer' | 'backup') => void;
   totalLiquidSeconds: number;
   isTimerRunning: boolean;
   onToggleTimer: () => void;
@@ -147,7 +147,23 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               <Calendar className="w-4 h-4" />
-              <span>Cronograma 7 Dias (20h-23h)</span>
+              <span>Cronograma Geral (20h-23h)</span>
+            </button>
+
+            <button
+              id="nav-tab-reta-final"
+              onClick={() => setCurrentTab('reta_final')}
+              className={`px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold flex items-center gap-2 transition-all whitespace-nowrap ${
+                currentTab === 'reta_final'
+                  ? 'bg-gradient-to-r from-rose-500 to-amber-500 text-slate-950 font-black shadow-md shadow-rose-500/20'
+                  : 'text-rose-400 hover:text-rose-300 hover:bg-rose-500/10'
+              }`}
+            >
+              <Flame className="w-4 h-4 fill-current text-rose-400" />
+              <span>Reta Final (28/11 a 04/12)</span>
+              <span className="hidden sm:inline-block text-[10px] px-1.5 py-0.2 rounded-full bg-slate-950/60 font-mono font-bold text-amber-300">
+                6h/dia
+              </span>
             </button>
 
             <button
