@@ -1,7 +1,7 @@
 import { StudySession, SessionLog, AppBackupData, DisciplineLinks, DisciplineId } from '../types';
 import { generateInitialSchedule } from './scheduleGenerator';
 
-const STORAGE_KEY_SESSIONS = 'pareto_study_sessions_v7';
+const STORAGE_KEY_SESSIONS = 'pareto_study_sessions_v8';
 const STORAGE_KEY_LOGS = 'pareto_study_logs_v1';
 const STORAGE_KEY_COMPLETED_TOPICS = 'pareto_study_completed_topics_v1';
 const STORAGE_KEY_TOTAL_SECONDS = 'pareto_study_total_liquid_sec_v1';
@@ -25,12 +25,22 @@ export function getStoredSessions(): StudySession[] {
         !parsed.some((s: StudySession) => s.type === 'reta_final' && (s.disciplineId === 'portugues' || s.disciplineId === 'matematica'));
 
       if (Array.isArray(parsed) && parsed.length > 0 && parsed[0]?.date === '2026-09-21' && !hasPreOctTopics && hasOctTopics && hasRetaFinalNoBasic) {
-        return parsed;
+        const initialMap = new Map(initial.map((s) => [s.id, s]));
+        const updatedParsed = parsed.map((s: StudySession) => {
+          if (s.microTopicId === 'micro_log_18') {
+            const init = initialMap.get(s.id);
+            if (init) {
+              return { ...s, title: init.title, subtitle: init.subtitle };
+            }
+          }
+          return s;
+        });
+        return updatedParsed;
       }
     }
 
-    // Attempt migration from v6 or older to preserve user progress
-    const olderRaw = localStorage.getItem('pareto_study_sessions_v6') || localStorage.getItem('pareto_study_sessions_v5') || localStorage.getItem('pareto_study_sessions_v4') || localStorage.getItem('pareto_study_sessions_v3') || localStorage.getItem('pareto_study_sessions_v2') || localStorage.getItem('pareto_study_sessions_v1');
+    // Attempt migration from v7, v6 or older to preserve user progress
+    const olderRaw = localStorage.getItem('pareto_study_sessions_v7') || localStorage.getItem('pareto_study_sessions_v6') || localStorage.getItem('pareto_study_sessions_v5') || localStorage.getItem('pareto_study_sessions_v4') || localStorage.getItem('pareto_study_sessions_v3') || localStorage.getItem('pareto_study_sessions_v2') || localStorage.getItem('pareto_study_sessions_v1');
     if (olderRaw) {
       const olderParsed = JSON.parse(olderRaw);
       if (Array.isArray(olderParsed)) {

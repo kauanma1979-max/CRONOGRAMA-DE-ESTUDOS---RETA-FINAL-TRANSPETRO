@@ -112,8 +112,8 @@ export const RETA_FINAL_CONFIG: Record<string, RetaFinalSlotConfig[]> = {
       shift: 'tarde',
       disciplineId: 'logistica',
       microTopicId: 'micro_log_18',
-      title: 'Logística: Armazenagem (Tipos de armazéns, layout, organização e WMS) — Armazéns e Layout',
-      subtitle: 'Armazém próprio x terceirizado x alfandegado (CLIA), layouts (I, U, L) e endereçamento fixo vs caótico.',
+      title: 'Logística: Políticas de estoque e níveis de serviço',
+      subtitle: 'Políticas de reposição contínua e periódica, estoque mínimo e de segurança, cálculo de nível de serviço (Fill Rate e OTIF) e trade-off de ruptura.',
     },
     {
       timeSlot: '20:00 - 21:00',
@@ -410,7 +410,7 @@ export function generateInitialSchedule(): StudySession[] {
   // Introduces Modalidades de Transporte & Armazenagem (WMS) right on 05/10/2026
   const fromOct05LogisticaTopicIds = [
     'micro_log_16', // Modalidades de Transporte — Modais e Matriz (inicia em 05/10/2026)
-    'micro_log_18', // Armazenagem — Tipos de Armazéns, Layout e Endereçamento (06/10/2026)
+    'micro_log_18', // Políticas de estoque e níveis de serviço (06/10/2026)
     'micro_log_17', // Modalidades de Transporte — Intermodalidade vs Multimodalidade e Regulação (08/10/2026)
     'micro_log_19', // Armazenagem — Sistemas WMS, Picking e Cross-docking (09/10/2026)
     'micro_log_1',  // Lei 14.133 Princípios
@@ -422,7 +422,7 @@ export function generateInitialSchedule(): StudySession[] {
     'micro_log_2',  // Lei 14.133 Modalidades
     'micro_log_16', // Retomada Transporte
     'micro_log_11', // Custos de estoque e LEC/EOQ
-    'micro_log_18', // Retomada Armazenagem
+    'micro_log_18', // Retomada Políticas de estoque e níveis de serviço
     'micro_log_14', // Aditivos contratuais 25%/50%
     'micro_log_17', // Retomada Transporte / Regulação
     'micro_log_6',  // Lei 13.303 Modos de disputa

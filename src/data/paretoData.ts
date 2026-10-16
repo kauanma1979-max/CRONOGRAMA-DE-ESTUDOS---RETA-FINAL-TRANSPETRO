@@ -673,12 +673,12 @@ export const MICRO_TOPICS: MicroTopic[] = [
   // ==========================================
   {
     id: 'micro_log_18',
-    mesoTopicId: 'meso_log_6',
+    mesoTopicId: 'meso_log_2',
     disciplineId: 'logistica',
-    title: 'Armazenagem (Tipos de armazéns, layout, organização e WMS) — Tipos de Armazéns, Layout e Endereçamento',
+    title: 'Políticas de estoque e níveis de serviço',
     keyConcepts:
-      'Classificação de armazéns (próprio, contratado/terceirizado e alfandegado/CLIA). Fluxos de layout (linha reta/I, formato em U e em L) e otimização de espaço. Sistemas de endereçamento fixo vs caótico/rotativo e zoneamento por giro ABC de produtos.',
-    difficulty: 'Fácil',
+      'Políticas de reposição contínua (ponto de pedido) e periódica (intervalo padrão). Definição de estoque mínimo, estoque de segurança e dimensionamento de buffer. Indicadores de nível de serviço (Service Level / Fill Rate, Order Fill Rate, OTIF) e trade-off entre custo de armazenagem e custo de ruptura/falta.',
+    difficulty: 'Médio',
     suggestedHours: 2.5,
     isCorePareto: true,
   },
