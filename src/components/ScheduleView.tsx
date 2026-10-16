@@ -21,8 +21,12 @@ import {
   Moon,
   Zap,
   Target,
+  Link2,
+  ExternalLink,
+  Edit3,
+  Trash2,
 } from 'lucide-react';
-import { StudySession, DisciplineId } from '../types';
+import { StudySession, DisciplineId, DisciplineLinks, DisciplineLink } from '../types';
 import { DISCIPLINES, MICRO_TOPICS } from '../data/paretoData';
 import {
   formatDateBrExtended,
@@ -31,6 +35,7 @@ import {
   RETA_FINAL_DATES,
   RETA_FINAL_CONFIG,
 } from '../utils/scheduleGenerator';
+import { DisciplineLinkModal } from './DisciplineLinkModal';
 
 interface ScheduleViewProps {
   sessions: StudySession[];
@@ -39,6 +44,9 @@ interface ScheduleViewProps {
   completedTopicIds: string[];
   initialViewMode?: 'daily' | 'weekly' | 'reta_final';
   onViewModeChange?: (mode: 'daily' | 'weekly' | 'reta_final') => void;
+  disciplineLinks?: DisciplineLinks;
+  onSaveDisciplineLink?: (disciplineId: DisciplineId, link: DisciplineLink) => void;
+  onDeleteDisciplineLink?: (disciplineId: DisciplineId) => void;
 }
 
 export const ScheduleView: React.FC<ScheduleViewProps> = ({
@@ -48,6 +56,9 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
   completedTopicIds,
   initialViewMode,
   onViewModeChange,
+  disciplineLinks,
+  onSaveDisciplineLink,
+  onDeleteDisciplineLink,
 }) => {
   // Get all unique dates
   const uniqueDates = useMemo(() => {
@@ -79,6 +90,13 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
   const [filterDiscipline, setFilterDiscipline] = useState<DisciplineId | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [retaFinalLayout, setRetaFinalLayout] = useState<'single_day' | 'all_days'>('single_day');
+  const [modalDisciplineId, setModalDisciplineId] = useState<DisciplineId | null>(null);
+  const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
+
+  const handleOpenLinkModal = (disciplineId: DisciplineId) => {
+    setModalDisciplineId(disciplineId);
+    setIsLinkModalOpen(true);
+  };
 
   // Sync viewMode with initialViewMode prop when it changes
   useEffect(() => {
@@ -268,6 +286,88 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
     .reduce((acc, s) => acc + s.targetMinutes, 0);
   const isSunday = new Date(selectedDate.replace(/-/g, '/')).getDay() === 0;
 
+  const renderDisciplineLinkSection = (disciplineId: DisciplineId) => {
+    const link = disciplineLinks?.[disciplineId];
+    const disc = DISCIPLINES.find((d) => d.id === disciplineId);
+
+    if (!link || !link.url) {
+      return (
+        <div className="mt-2 flex items-center">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleOpenLinkModal(disciplineId);
+            }}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-950/70 hover:bg-slate-800 text-slate-400 hover:text-amber-300 border border-dashed border-slate-700/80 hover:border-amber-500/50 transition-all group"
+            title={`Inserir link para ${disc?.name || 'esta matéria'}`}
+          >
+            <Link2 className="w-3.5 h-3.5 text-slate-500 group-hover:text-amber-400 transition-colors" />
+            <span>+ Inserir Link da Matéria</span>
+          </button>
+        </div>
+      );
+    }
+
+    const targetUrl = link.url.startsWith('http://') || link.url.startsWith('https://') ? link.url : `https://${link.url}`;
+
+    return (
+      <div className="mt-2">
+        <div className="p-2 sm:p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/90 hover:border-slate-700 transition-all flex flex-wrap items-center justify-between gap-2 shadow-sm">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20 shrink-0">
+              <Link2 className="w-3.5 h-3.5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <a
+                href={targetUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="text-xs font-bold text-amber-300 hover:text-amber-200 hover:underline inline-flex items-center gap-1 max-w-full"
+                title={`Abrir link: ${targetUrl}`}
+              >
+                <span className="truncate">{link.title || link.url}</span>
+                <ExternalLink className="w-3 h-3 shrink-0 opacity-70" />
+              </a>
+              <span className="text-[10px] text-slate-400 block truncate">
+                Link sincronizado de {disc?.shortName || disc?.name || 'esta matéria'}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleOpenLinkModal(disciplineId);
+              }}
+              className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors text-xs font-medium flex items-center gap-1"
+              title="Editar link da matéria"
+            >
+              <Edit3 className="w-3 h-3 text-slate-400" />
+              <span className="text-[11px]">Editar</span>
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onDeleteDisciplineLink) {
+                  onDeleteDisciplineLink(disciplineId);
+                }
+              }}
+              className="p-1 rounded-lg bg-slate-800 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 transition-colors text-xs"
+              title="Excluir link da matéria"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderRetaFinalCard = (session: StudySession) => {
     const disc = DISCIPLINES.find((d) => d.id === session.disciplineId);
     return (
@@ -333,11 +433,12 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
           </h4>
 
           {/* Subtitle / Focus */}
-          {session.subtitle && (
-            <p className="text-xs text-slate-300 leading-relaxed bg-slate-950/40 p-2.5 rounded-xl border border-slate-800/80">
-              💡 <strong>Foco:</strong> {session.subtitle}
-            </p>
-          )}
+          <p className="text-xs text-slate-300 leading-relaxed bg-slate-950/40 p-2.5 rounded-xl border border-slate-800/80">
+            💡 <strong>Foco Cesgranrio:</strong> {session.subtitle || 'Revisão intensiva de questões estilo Cesgranrio.'}
+          </p>
+
+          {/* Link da Matéria (Logo abaixo de Foco Cesgranrio) */}
+          {renderDisciplineLinkSection(session.disciplineId)}
         </div>
 
         {/* Footer with Timer Launch Button */}
@@ -765,11 +866,18 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                           </h3>
 
                           {/* Subtitle / Key Concepts */}
-                          {session.subtitle && (
-                            <p className="text-xs text-slate-300 mt-1 leading-relaxed bg-slate-950/40 p-2 rounded-lg border border-slate-800/80">
-                              💡 <strong>Foco Cesgranrio:</strong> {session.subtitle}
-                            </p>
-                          )}
+                          <p className="text-xs text-slate-300 mt-1 leading-relaxed bg-slate-950/40 p-2 rounded-lg border border-slate-800/80">
+                            💡 <strong>Foco Cesgranrio:</strong>{' '}
+                            {session.subtitle ||
+                              (session.disciplineId === 'portugues'
+                                ? 'Gramática aplicada, interpretação de texto e estilo da banca Cesgranrio.'
+                                : session.disciplineId === 'matematica'
+                                ? 'Raciocínio lógico, porcentagem, matemática financeira e questões Cesgranrio.'
+                                : 'Revisão direcionada e resolução de questões Cesgranrio.')}
+                          </p>
+
+                          {/* Link da Matéria (Logo abaixo de Foco Cesgranrio) */}
+                          {renderDisciplineLinkSection(session.disciplineId)}
                         </div>
                       </div>
 
@@ -1118,6 +1226,24 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
           )}
         </div>
       )}
+
+      {/* Modal para Inserção, Edição e Exclusão de Link da Matéria */}
+      <DisciplineLinkModal
+        isOpen={isLinkModalOpen}
+        onClose={() => setIsLinkModalOpen(false)}
+        disciplineId={modalDisciplineId}
+        existingLink={modalDisciplineId && disciplineLinks ? disciplineLinks[modalDisciplineId] : undefined}
+        onSave={(discId, link) => {
+          if (onSaveDisciplineLink) {
+            onSaveDisciplineLink(discId, link);
+          }
+        }}
+        onDelete={(discId) => {
+          if (onDeleteDisciplineLink) {
+            onDeleteDisciplineLink(discId);
+          }
+        }}
+      />
     </div>
   );
 };

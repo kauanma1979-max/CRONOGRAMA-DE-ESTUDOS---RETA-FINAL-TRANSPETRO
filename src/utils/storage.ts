@@ -1,4 +1,4 @@
-import { StudySession, SessionLog, AppBackupData } from '../types';
+import { StudySession, SessionLog, AppBackupData, DisciplineLinks } from '../types';
 import { generateInitialSchedule } from './scheduleGenerator';
 
 const STORAGE_KEY_SESSIONS = 'pareto_study_sessions_v7';
@@ -6,6 +6,7 @@ const STORAGE_KEY_LOGS = 'pareto_study_logs_v1';
 const STORAGE_KEY_COMPLETED_TOPICS = 'pareto_study_completed_topics_v1';
 const STORAGE_KEY_TOTAL_SECONDS = 'pareto_study_total_liquid_sec_v1';
 const STORAGE_KEY_NOTES = 'pareto_study_topic_notes_v1';
+const STORAGE_KEY_DISCIPLINE_LINKS = 'pareto_study_discipline_links_v1';
 
 export function getStoredSessions(): StudySession[] {
   const initial = generateInitialSchedule();
@@ -136,12 +137,31 @@ export function saveStoredTopicNotes(notes: Record<string, string>): void {
   }
 }
 
+export function getStoredDisciplineLinks(): DisciplineLinks {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_DISCIPLINE_LINKS);
+    if (raw) return JSON.parse(raw);
+  } catch (err) {
+    console.error('Error loading discipline links', err);
+  }
+  return {};
+}
+
+export function saveStoredDisciplineLinks(links: DisciplineLinks): void {
+  try {
+    localStorage.setItem(STORAGE_KEY_DISCIPLINE_LINKS, JSON.stringify(links));
+  } catch (err) {
+    console.error('Error saving discipline links', err);
+  }
+}
+
 export function exportBackupData(
   sessions: StudySession[],
   sessionLogs: SessionLog[],
   completedMicroTopicIds: string[],
   totalLiquidSeconds: number,
-  notesByTopic: Record<string, string>
+  notesByTopic: Record<string, string>,
+  disciplineLinks?: DisciplineLinks
 ): void {
   const data: AppBackupData = {
     version: '1.0.0',
@@ -152,6 +172,7 @@ export function exportBackupData(
     completedMicroTopicIds,
     totalLiquidSeconds,
     notesByTopic,
+    disciplineLinks,
   };
 
   const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(data, null, 2))}`;
@@ -183,5 +204,6 @@ export function validateAndParseBackup(fileContent: string): AppBackupData {
       : [],
     totalLiquidSeconds: Number(parsed.totalLiquidSeconds) || 0,
     notesByTopic: parsed.notesByTopic && typeof parsed.notesByTopic === 'object' ? parsed.notesByTopic : {},
+    disciplineLinks: parsed.disciplineLinks && typeof parsed.disciplineLinks === 'object' ? parsed.disciplineLinks : {},
   };
 }

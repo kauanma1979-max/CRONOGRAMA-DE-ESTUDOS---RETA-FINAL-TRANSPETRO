@@ -10,7 +10,7 @@ import { ParetoExplorer } from './components/ParetoExplorer';
 import { MetricsAndTimerView } from './components/MetricsAndTimerView';
 import { BackupView } from './components/BackupView';
 import { LiquidTimerModal } from './components/LiquidTimerModal';
-import { StudySession, SessionLog, AppBackupData, DisciplineId } from './types';
+import { StudySession, SessionLog, AppBackupData, DisciplineId, DisciplineLinks, DisciplineLink } from './types';
 import {
   getStoredSessions,
   saveStoredSessions,
@@ -20,6 +20,8 @@ import {
   saveStoredCompletedTopicIds,
   getStoredTotalLiquidSeconds,
   saveStoredTotalLiquidSeconds,
+  getStoredDisciplineLinks,
+  saveStoredDisciplineLinks,
   exportBackupData,
 } from './utils/storage';
 import { generateInitialSchedule } from './utils/scheduleGenerator';
@@ -35,6 +37,9 @@ export default function App() {
   );
   const [totalLiquidSeconds, setTotalLiquidSeconds] = useState<number>(() =>
     getStoredTotalLiquidSeconds()
+  );
+  const [disciplineLinks, setDisciplineLinks] = useState<DisciplineLinks>(() =>
+    getStoredDisciplineLinks()
   );
 
   // Timer States
@@ -242,6 +247,25 @@ export default function App() {
     ]
   );
 
+  // Save or update discipline link
+  const handleSaveDisciplineLink = useCallback((disciplineId: DisciplineId, link: DisciplineLink) => {
+    setDisciplineLinks((prev) => {
+      const updated = { ...prev, [disciplineId]: link };
+      saveStoredDisciplineLinks(updated);
+      return updated;
+    });
+  }, []);
+
+  // Delete discipline link
+  const handleDeleteDisciplineLink = useCallback((disciplineId: DisciplineId) => {
+    setDisciplineLinks((prev) => {
+      const updated = { ...prev };
+      delete updated[disciplineId];
+      saveStoredDisciplineLinks(updated);
+      return updated;
+    });
+  }, []);
+
   // Restore backup
   const handleRestoreBackup = useCallback(
     (backup: AppBackupData) => {
@@ -256,6 +280,11 @@ export default function App() {
 
       setTotalLiquidSeconds(backup.totalLiquidSeconds);
       saveStoredTotalLiquidSeconds(backup.totalLiquidSeconds);
+
+      if (backup.disciplineLinks) {
+        setDisciplineLinks(backup.disciplineLinks);
+        saveStoredDisciplineLinks(backup.disciplineLinks);
+      }
 
       setIsTimerRunning(false);
       setTimerElapsedSeconds(0);
@@ -275,6 +304,8 @@ export default function App() {
     saveStoredCompletedTopicIds([]);
     setTotalLiquidSeconds(0);
     saveStoredTotalLiquidSeconds(0);
+    setDisciplineLinks({});
+    saveStoredDisciplineLinks({});
     setIsTimerRunning(false);
     setTimerElapsedSeconds(0);
     setActiveTimerSession(null);
@@ -301,7 +332,8 @@ export default function App() {
             sessionLogs,
             completedMicroTopicIds,
             totalLiquidSeconds,
-            {}
+            {},
+            disciplineLinks
           )
         }
         onQuickRestoreClick={() => setCurrentTab('backup')}
@@ -316,6 +348,9 @@ export default function App() {
             onStartSessionTimer={handleStartSessionTimer}
             completedTopicIds={completedMicroTopicIds}
             initialViewMode={currentTab === 'reta_final' ? 'reta_final' : 'daily'}
+            disciplineLinks={disciplineLinks}
+            onSaveDisciplineLink={handleSaveDisciplineLink}
+            onDeleteDisciplineLink={handleDeleteDisciplineLink}
             onViewModeChange={(mode) => {
               if (mode === 'reta_final' && currentTab !== 'reta_final') {
                 setCurrentTab('reta_final');
@@ -355,6 +390,7 @@ export default function App() {
             sessionLogs={sessionLogs}
             completedMicroTopicIds={completedMicroTopicIds}
             totalLiquidSeconds={totalLiquidSeconds}
+            disciplineLinks={disciplineLinks}
             onRestoreBackup={handleRestoreBackup}
             onResetToDefaults={handleResetToDefaults}
           />

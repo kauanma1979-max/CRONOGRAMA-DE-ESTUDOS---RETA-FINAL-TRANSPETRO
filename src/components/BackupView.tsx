@@ -10,7 +10,7 @@ import {
   Check,
   ShieldCheck,
 } from 'lucide-react';
-import { StudySession, SessionLog, AppBackupData } from '../types';
+import { StudySession, SessionLog, AppBackupData, DisciplineLinks } from '../types';
 import { exportBackupData, validateAndParseBackup } from '../utils/storage';
 import { formatSecondsToDigital } from '../utils/scheduleGenerator';
 
@@ -19,6 +19,7 @@ interface BackupViewProps {
   sessionLogs: SessionLog[];
   completedMicroTopicIds: string[];
   totalLiquidSeconds: number;
+  disciplineLinks?: DisciplineLinks;
   onRestoreBackup: (backup: AppBackupData) => void;
   onResetToDefaults: () => void;
 }
@@ -28,6 +29,7 @@ export const BackupView: React.FC<BackupViewProps> = ({
   sessionLogs,
   completedMicroTopicIds,
   totalLiquidSeconds,
+  disciplineLinks,
   onRestoreBackup,
   onResetToDefaults,
 }) => {
@@ -44,7 +46,8 @@ export const BackupView: React.FC<BackupViewProps> = ({
       sessionLogs,
       completedMicroTopicIds,
       totalLiquidSeconds,
-      {}
+      {},
+      disciplineLinks
     );
   };
 

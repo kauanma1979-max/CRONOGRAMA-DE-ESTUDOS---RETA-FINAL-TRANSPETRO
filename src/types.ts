@@ -92,6 +92,14 @@ export interface SessionLog {
   correctCount?: number;
 }
 
+export interface DisciplineLink {
+  url: string;
+  title?: string;
+  updatedAt?: number;
+}
+
+export type DisciplineLinks = Partial<Record<DisciplineId, DisciplineLink>>;
+
 export interface AppBackupData {
   version: string;
   exportDate: string;
@@ -101,4 +109,5 @@ export interface AppBackupData {
   sessionLogs: SessionLog[];
   totalLiquidSeconds: number;
   notesByTopic: Record<string, string>;
+  disciplineLinks?: DisciplineLinks;
 }
