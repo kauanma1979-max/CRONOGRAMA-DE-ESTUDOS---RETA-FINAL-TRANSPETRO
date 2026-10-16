@@ -247,20 +247,35 @@ export default function App() {
     ]
   );
 
-  // Save or update discipline link
+  // Save or update discipline link (appends new or updates existing)
   const handleSaveDisciplineLink = useCallback((disciplineId: DisciplineId, link: DisciplineLink) => {
     setDisciplineLinks((prev) => {
-      const updated = { ...prev, [disciplineId]: link };
+      const currentList = prev[disciplineId] || [];
+      const index = currentList.findIndex((item) => item.id === link.id);
+      let updatedList: DisciplineLink[];
+      if (index >= 0) {
+        updatedList = [...currentList];
+        updatedList[index] = link;
+      } else {
+        updatedList = [...currentList, link];
+      }
+      const updated = { ...prev, [disciplineId]: updatedList };
       saveStoredDisciplineLinks(updated);
       return updated;
     });
   }, []);
 
-  // Delete discipline link
-  const handleDeleteDisciplineLink = useCallback((disciplineId: DisciplineId) => {
+  // Delete a specific discipline link by id (or clear all if no linkId)
+  const handleDeleteDisciplineLink = useCallback((disciplineId: DisciplineId, linkId?: string) => {
     setDisciplineLinks((prev) => {
-      const updated = { ...prev };
-      delete updated[disciplineId];
+      const currentList = prev[disciplineId] || [];
+      let updatedList: DisciplineLink[];
+      if (linkId) {
+        updatedList = currentList.filter((item) => item.id !== linkId);
+      } else {
+        updatedList = [];
+      }
+      const updated = { ...prev, [disciplineId]: updatedList };
       saveStoredDisciplineLinks(updated);
       return updated;
     });

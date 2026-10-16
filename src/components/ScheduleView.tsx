@@ -25,6 +25,7 @@ import {
   ExternalLink,
   Edit3,
   Trash2,
+  Plus,
 } from 'lucide-react';
 import { StudySession, DisciplineId, DisciplineLinks, DisciplineLink } from '../types';
 import { DISCIPLINES, MICRO_TOPICS } from '../data/paretoData';
@@ -46,7 +47,7 @@ interface ScheduleViewProps {
   onViewModeChange?: (mode: 'daily' | 'weekly' | 'reta_final') => void;
   disciplineLinks?: DisciplineLinks;
   onSaveDisciplineLink?: (disciplineId: DisciplineId, link: DisciplineLink) => void;
-  onDeleteDisciplineLink?: (disciplineId: DisciplineId) => void;
+  onDeleteDisciplineLink?: (disciplineId: DisciplineId, linkId?: string) => void;
 }
 
 export const ScheduleView: React.FC<ScheduleViewProps> = ({
@@ -91,10 +92,18 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [retaFinalLayout, setRetaFinalLayout] = useState<'single_day' | 'all_days'>('single_day');
   const [modalDisciplineId, setModalDisciplineId] = useState<DisciplineId | null>(null);
+  const [modalLinkToEdit, setModalLinkToEdit] = useState<DisciplineLink | null>(null);
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
 
-  const handleOpenLinkModal = (disciplineId: DisciplineId) => {
+  const handleOpenAddLinkModal = (disciplineId: DisciplineId) => {
     setModalDisciplineId(disciplineId);
+    setModalLinkToEdit(null);
+    setIsLinkModalOpen(true);
+  };
+
+  const handleOpenEditLinkModal = (disciplineId: DisciplineId, link: DisciplineLink) => {
+    setModalDisciplineId(disciplineId);
+    setModalLinkToEdit(link);
     setIsLinkModalOpen(true);
   };
 
@@ -287,82 +296,113 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
   const isSunday = new Date(selectedDate.replace(/-/g, '/')).getDay() === 0;
 
   const renderDisciplineLinkSection = (disciplineId: DisciplineId) => {
-    const link = disciplineLinks?.[disciplineId];
+    const links = disciplineLinks?.[disciplineId] || [];
     const disc = DISCIPLINES.find((d) => d.id === disciplineId);
 
-    if (!link || !link.url) {
+    if (links.length === 0) {
       return (
         <div className="mt-2 flex items-center">
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              handleOpenLinkModal(disciplineId);
+              handleOpenAddLinkModal(disciplineId);
             }}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-950/70 hover:bg-slate-800 text-slate-400 hover:text-amber-300 border border-dashed border-slate-700/80 hover:border-amber-500/50 transition-all group"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-950/70 hover:bg-slate-800 text-slate-400 hover:text-amber-300 border border-dashed border-slate-700/80 hover:border-amber-500/50 transition-all group active:scale-95 shadow-sm"
             title={`Inserir link para ${disc?.name || 'esta matéria'}`}
           >
-            <Link2 className="w-3.5 h-3.5 text-slate-500 group-hover:text-amber-400 transition-colors" />
+            <Plus className="w-3.5 h-3.5 text-amber-400 group-hover:scale-110 transition-transform" />
             <span>+ Inserir Link da Matéria</span>
           </button>
         </div>
       );
     }
 
-    const targetUrl = link.url.startsWith('http://') || link.url.startsWith('https://') ? link.url : `https://${link.url}`;
-
     return (
-      <div className="mt-2">
-        <div className="p-2 sm:p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/90 hover:border-slate-700 transition-all flex flex-wrap items-center justify-between gap-2 shadow-sm">
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20 shrink-0">
-              <Link2 className="w-3.5 h-3.5" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <a
-                href={targetUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="text-xs font-bold text-amber-300 hover:text-amber-200 hover:underline inline-flex items-center gap-1 max-w-full"
-                title={`Abrir link: ${targetUrl}`}
+      <div className="mt-2.5 space-y-1.5">
+        {/* Lista de Links da Matéria */}
+        <div className="space-y-1.5">
+          {links.map((link, idx) => {
+            const targetUrl = link.url.startsWith('http://') || link.url.startsWith('https://') ? link.url : `https://${link.url}`;
+            return (
+              <div
+                key={link.id || idx}
+                className="p-2 sm:p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/90 hover:border-slate-700/80 transition-all flex flex-wrap items-center justify-between gap-2 shadow-sm"
               >
-                <span className="truncate">{link.title || link.url}</span>
-                <ExternalLink className="w-3 h-3 shrink-0 opacity-70" />
-              </a>
-              <span className="text-[10px] text-slate-400 block truncate">
-                Link sincronizado de {disc?.shortName || disc?.name || 'esta matéria'}
-              </span>
-            </div>
-          </div>
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20 shrink-0">
+                    <Link2 className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <a
+                      href={targetUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-xs font-bold text-amber-300 hover:text-amber-200 hover:underline inline-flex items-center gap-1 max-w-full"
+                      title={`Abrir link: ${targetUrl}`}
+                    >
+                      <span className="truncate">{link.title || link.url}</span>
+                      <ExternalLink className="w-3 h-3 shrink-0 opacity-70" />
+                    </a>
+                    {link.title && (
+                      <span className="text-[10px] text-slate-400 block truncate font-mono">
+                        {targetUrl}
+                      </span>
+                    )}
+                  </div>
+                </div>
 
-          <div className="flex items-center gap-1 shrink-0">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleOpenLinkModal(disciplineId);
-              }}
-              className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors text-xs font-medium flex items-center gap-1"
-              title="Editar link da matéria"
-            >
-              <Edit3 className="w-3 h-3 text-slate-400" />
-              <span className="text-[11px]">Editar</span>
-            </button>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (onDeleteDisciplineLink) {
-                  onDeleteDisciplineLink(disciplineId);
-                }
-              }}
-              className="p-1 rounded-lg bg-slate-800 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 transition-colors text-xs"
-              title="Excluir link da matéria"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
-          </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOpenEditLinkModal(disciplineId, link);
+                    }}
+                    className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors text-xs font-medium flex items-center gap-1"
+                    title="Editar este link"
+                  >
+                    <Edit3 className="w-3 h-3 text-slate-400" />
+                    <span className="text-[11px]">Editar</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onDeleteDisciplineLink) {
+                        onDeleteDisciplineLink(disciplineId, link.id);
+                      }
+                    }}
+                    className="p-1 rounded-lg bg-slate-800 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 transition-colors text-xs"
+                    title="Excluir este link"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Botão para inserir quantos links forem necessários */}
+        <div className="pt-0.5 flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleOpenAddLinkModal(disciplineId);
+            }}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-900/90 hover:bg-slate-800 text-amber-300 hover:text-amber-200 border border-dashed border-amber-500/30 hover:border-amber-500/60 transition-all active:scale-95 group shadow-sm"
+            title={`Inserir mais um link para ${disc?.name || 'esta matéria'}`}
+          >
+            <Plus className="w-3 h-3 text-amber-400 group-hover:scale-110 transition-transform" />
+            <span>+ Adicionar outro Link</span>
+          </button>
+
+          <span className="text-[10px] text-slate-400">
+            {links.length} {links.length === 1 ? 'link sincronizado' : 'links sincronizados'} ({disc?.shortName})
+          </span>
         </div>
       </div>
     );
@@ -1227,22 +1267,27 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
         </div>
       )}
 
-      {/* Modal para Inserção, Edição e Exclusão de Link da Matéria */}
+      {/* Modal para Inserção, Edição e Exclusão de Links da Matéria */}
       <DisciplineLinkModal
         isOpen={isLinkModalOpen}
-        onClose={() => setIsLinkModalOpen(false)}
+        onClose={() => {
+          setIsLinkModalOpen(false);
+          setModalLinkToEdit(null);
+        }}
         disciplineId={modalDisciplineId}
-        existingLink={modalDisciplineId && disciplineLinks ? disciplineLinks[modalDisciplineId] : undefined}
+        linkToEdit={modalLinkToEdit}
+        existingLinks={modalDisciplineId && disciplineLinks ? disciplineLinks[modalDisciplineId] || [] : []}
         onSave={(discId, link) => {
           if (onSaveDisciplineLink) {
             onSaveDisciplineLink(discId, link);
           }
         }}
-        onDelete={(discId) => {
+        onDelete={(discId, linkId) => {
           if (onDeleteDisciplineLink) {
-            onDeleteDisciplineLink(discId);
+            onDeleteDisciplineLink(discId, linkId);
           }
         }}
+        onSelectLinkToEdit={(link) => setModalLinkToEdit(link)}
       />
     </div>
   );

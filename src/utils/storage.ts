@@ -1,4 +1,4 @@
-import { StudySession, SessionLog, AppBackupData, DisciplineLinks } from '../types';
+import { StudySession, SessionLog, AppBackupData, DisciplineLinks, DisciplineId } from '../types';
 import { generateInitialSchedule } from './scheduleGenerator';
 
 const STORAGE_KEY_SESSIONS = 'pareto_study_sessions_v7';
@@ -137,10 +137,40 @@ export function saveStoredTopicNotes(notes: Record<string, string>): void {
   }
 }
 
+export function normalizeDisciplineLinks(raw: any): DisciplineLinks {
+  if (!raw || typeof raw !== 'object') return {};
+  const normalized: DisciplineLinks = {};
+  for (const [key, val] of Object.entries(raw)) {
+    const discKey = key as DisciplineId;
+    if (Array.isArray(val)) {
+      normalized[discKey] = val
+        .map((item: any, idx: number) => ({
+          id: item?.id ? String(item.id) : `link_${discKey}_${Date.now()}_${idx}`,
+          url: typeof item?.url === 'string' ? item.url.trim() : '',
+          title: item?.title ? String(item.title).trim() : undefined,
+          updatedAt: typeof item?.updatedAt === 'number' ? item.updatedAt : Date.now(),
+        }))
+        .filter((item) => !!item.url);
+    } else if (val && typeof val === 'object' && (val as any).url) {
+      normalized[discKey] = [
+        {
+          id: (val as any).id ? String((val as any).id) : `link_${discKey}_0_${Date.now()}`,
+          url: String((val as any).url).trim(),
+          title: (val as any).title ? String((val as any).title).trim() : undefined,
+          updatedAt: (val as any).updatedAt || Date.now(),
+        },
+      ];
+    }
+  }
+  return normalized;
+}
+
 export function getStoredDisciplineLinks(): DisciplineLinks {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_DISCIPLINE_LINKS);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      return normalizeDisciplineLinks(JSON.parse(raw));
+    }
   } catch (err) {
     console.error('Error loading discipline links', err);
   }
@@ -204,6 +234,6 @@ export function validateAndParseBackup(fileContent: string): AppBackupData {
       : [],
     totalLiquidSeconds: Number(parsed.totalLiquidSeconds) || 0,
     notesByTopic: parsed.notesByTopic && typeof parsed.notesByTopic === 'object' ? parsed.notesByTopic : {},
-    disciplineLinks: parsed.disciplineLinks && typeof parsed.disciplineLinks === 'object' ? parsed.disciplineLinks : {},
+    disciplineLinks: parsed.disciplineLinks ? normalizeDisciplineLinks(parsed.disciplineLinks) : {},
   };
 }

@@ -9,6 +9,7 @@ import {
   Globe,
   Tag,
   Info,
+  Plus,
 } from 'lucide-react';
 import { DisciplineId, DisciplineLink } from '../types';
 import { DISCIPLINES } from '../data/paretoData';
@@ -17,18 +18,22 @@ interface DisciplineLinkModalProps {
   isOpen: boolean;
   onClose: () => void;
   disciplineId: DisciplineId | null;
-  existingLink?: DisciplineLink;
+  linkToEdit?: DisciplineLink | null;
+  existingLinks?: DisciplineLink[];
   onSave: (disciplineId: DisciplineId, link: DisciplineLink) => void;
-  onDelete: (disciplineId: DisciplineId) => void;
+  onDelete: (disciplineId: DisciplineId, linkId: string) => void;
+  onSelectLinkToEdit?: (link: DisciplineLink | null) => void;
 }
 
 export const DisciplineLinkModal: React.FC<DisciplineLinkModalProps> = ({
   isOpen,
   onClose,
   disciplineId,
-  existingLink,
+  linkToEdit,
+  existingLinks = [],
   onSave,
   onDelete,
+  onSelectLinkToEdit,
 }) => {
   const [url, setUrl] = useState('');
   const [title, setTitle] = useState('');
@@ -37,15 +42,15 @@ export const DisciplineLinkModal: React.FC<DisciplineLinkModalProps> = ({
 
   const discipline = DISCIPLINES.find((d) => d.id === disciplineId);
 
-  // Sync state when modal opens or existingLink changes
+  // Sync state when modal opens or linkToEdit changes
   useEffect(() => {
     if (isOpen) {
-      setUrl(existingLink?.url || '');
-      setTitle(existingLink?.title || '');
+      setUrl(linkToEdit?.url || '');
+      setTitle(linkToEdit?.title || '');
       setError(null);
       setIsConfirmingDelete(false);
     }
-  }, [isOpen, existingLink, disciplineId]);
+  }, [isOpen, linkToEdit, disciplineId]);
 
   if (!isOpen || !disciplineId || !discipline) return null;
 
@@ -58,7 +63,11 @@ export const DisciplineLinkModal: React.FC<DisciplineLinkModalProps> = ({
     return trimmed;
   };
 
-  const handleSave = (e?: React.FormEvent) => {
+  const generateId = (): string => {
+    return `link_${disciplineId}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  };
+
+  const handleSave = (e?: React.FormEvent, andKeepOpenForNext = false) => {
     if (e) e.preventDefault();
     const cleanUrl = normalizeUrl(url);
 
@@ -74,24 +83,41 @@ export const DisciplineLinkModal: React.FC<DisciplineLinkModalProps> = ({
       return;
     }
 
-    onSave(disciplineId, {
+    const linkPayload: DisciplineLink = {
+      id: linkToEdit?.id || generateId(),
       url: cleanUrl,
       title: title.trim() || undefined,
       updatedAt: Date.now(),
-    });
-    onClose();
+    };
+
+    onSave(disciplineId, linkPayload);
+
+    if (andKeepOpenForNext) {
+      // Clear form and stay in "New Link" mode to insert another link immediately
+      setUrl('');
+      setTitle('');
+      setError(null);
+      setIsConfirmingDelete(false);
+      if (onSelectLinkToEdit) {
+        onSelectLinkToEdit(null);
+      }
+    } else {
+      onClose();
+    }
   };
 
   const handleDelete = () => {
+    if (!linkToEdit?.id) return;
     if (!isConfirmingDelete) {
       setIsConfirmingDelete(true);
       return;
     }
-    onDelete(disciplineId);
+    onDelete(disciplineId, linkToEdit.id);
     onClose();
   };
 
   const previewNormalizedUrl = normalizeUrl(url);
+  const isEditing = Boolean(linkToEdit);
 
   return (
     <div
@@ -99,7 +125,7 @@ export const DisciplineLinkModal: React.FC<DisciplineLinkModalProps> = ({
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-lg bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl p-5 sm:p-6 space-y-5 text-slate-200"
+        className="relative w-full max-w-lg bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl p-5 sm:p-6 space-y-4 text-slate-200 max-h-[92vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -117,12 +143,12 @@ export const DisciplineLinkModal: React.FC<DisciplineLinkModalProps> = ({
                 >
                   {discipline.shortName}
                 </span>
-                <span className="text-xs text-slate-400 font-mono">
-                  {existingLink ? 'Editar Link' : 'Novo Link'}
+                <span className="text-xs text-amber-400 font-mono font-semibold">
+                  {isEditing ? 'Editar Link' : 'Inserir Novo Link'}
                 </span>
               </div>
               <h3 className="text-base sm:text-lg font-black text-white mt-0.5">
-                Link da Matéria: {discipline.name}
+                Links de {discipline.name}
               </h3>
             </div>
           </div>
@@ -141,14 +167,69 @@ export const DisciplineLinkModal: React.FC<DisciplineLinkModalProps> = ({
         <div className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-200/90 leading-relaxed">
           <Info className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
           <div>
-            <strong>Sincronização Automática:</strong> Este link acompanhará todas as sessões em que{' '}
-            <strong className="text-amber-300">{discipline.name}</strong> aparecer ao longo de todo o
-            cronograma — tanto nos dias anteriores quanto nos próximos dias.
+            <strong>Sincronização em todo o cronograma:</strong> Os links cadastrados nesta matéria
+            aparecerão automaticamente em <strong>todas as aulas de {discipline.name}</strong>, tanto
+            nas datas anteriores quanto nos próximos dias e na Reta Final.
           </div>
         </div>
 
+        {/* Existing links chips/switcher (if user has multiple links) */}
+        {existingLinks.length > 0 && (
+          <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800 space-y-2">
+            <div className="flex items-center justify-between text-xs text-slate-400 font-medium">
+              <span>Links cadastrados nesta matéria ({existingLinks.length}):</span>
+              {isEditing && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onSelectLinkToEdit) onSelectLinkToEdit(null);
+                    setUrl('');
+                    setTitle('');
+                    setError(null);
+                    setIsConfirmingDelete(false);
+                  }}
+                  className="text-amber-400 hover:text-amber-300 font-bold flex items-center gap-1 text-[11px]"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>+ Inserir Outro Link</span>
+                </button>
+              )}
+            </div>
+
+            <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-1">
+              {existingLinks.map((item, idx) => {
+                const isActive = linkToEdit?.id === item.id;
+                return (
+                  <button
+                    key={item.id || idx}
+                    type="button"
+                    onClick={() => {
+                      if (onSelectLinkToEdit) {
+                        onSelectLinkToEdit(item);
+                      }
+                      setUrl(item.url);
+                      setTitle(item.title || '');
+                      setError(null);
+                      setIsConfirmingDelete(false);
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all max-w-[200px] truncate ${
+                      isActive
+                        ? 'bg-amber-500 text-slate-950 font-bold shadow-md'
+                        : 'bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/60'
+                    }`}
+                    title={item.title || item.url}
+                  >
+                    <Link2 className="w-3 h-3 shrink-0" />
+                    <span className="truncate">{item.title || item.url}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Form */}
-        <form onSubmit={handleSave} className="space-y-4">
+        <form onSubmit={(e) => handleSave(e, false)} className="space-y-4 pt-1">
           {/* URL Input */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
@@ -184,11 +265,11 @@ export const DisciplineLinkModal: React.FC<DisciplineLinkModalProps> = ({
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Ex: Pasta Google Drive de Questões, Caderno de Resumos, Vídeos..."
+              placeholder="Ex: Pasta Google Drive, Resumo Teórico, Lista de Questões Cesgranrio..."
               className="w-full bg-slate-950 border border-slate-700 focus:border-amber-500 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none transition-colors"
             />
             <p className="text-[11px] text-slate-500">
-              Se deixar em branco, o link exibirá a própria URL ou o nome da matéria.
+              Nome de identificação do link (ex: &quot;Apostila Bloco 1&quot;, &quot;Simulado Cesgranrio&quot;).
             </p>
           </div>
 
@@ -213,7 +294,7 @@ export const DisciplineLinkModal: React.FC<DisciplineLinkModalProps> = ({
           {/* Footer Actions */}
           <div className="pt-4 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2">
             <div>
-              {existingLink && (
+              {isEditing && (
                 <button
                   type="button"
                   onClick={handleDelete}
@@ -222,10 +303,10 @@ export const DisciplineLinkModal: React.FC<DisciplineLinkModalProps> = ({
                       ? 'bg-rose-600 hover:bg-rose-700 text-white animate-pulse'
                       : 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30'
                   }`}
-                  title="Remover link desta matéria em todo o cronograma"
+                  title="Remover este link da matéria"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
-                  <span>{isConfirmingDelete ? 'Confirmar Exclusão?' : 'Excluir Link'}</span>
+                  <span>{isConfirmingDelete ? 'Confirmar Exclusão?' : 'Excluir Este Link'}</span>
                 </button>
               )}
             </div>
@@ -239,12 +320,24 @@ export const DisciplineLinkModal: React.FC<DisciplineLinkModalProps> = ({
                 Cancelar
               </button>
 
+              {!isEditing && (
+                <button
+                  type="button"
+                  onClick={(e) => handleSave(e, true)}
+                  className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold text-xs flex items-center gap-1.5 border border-amber-500/30 transition-all active:scale-95"
+                  title="Salva este link e mantém aberto para inserir o próximo"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Salvar e Adicionar Outro</span>
+                </button>
+              )}
+
               <button
                 type="submit"
                 className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-lg shadow-amber-500/20 transition-all active:scale-95"
               >
                 <Check className="w-4 h-4 stroke-[3]" />
-                <span>{existingLink ? 'Salvar Alterações' : 'Salvar Link'}</span>
+                <span>{isEditing ? 'Salvar Alterações' : 'Salvar Link'}</span>
               </button>
             </div>
           </div>

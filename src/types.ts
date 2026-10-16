@@ -93,12 +93,13 @@ export interface SessionLog {
 }
 
 export interface DisciplineLink {
+  id: string;
   url: string;
   title?: string;
   updatedAt?: number;
 }
 
-export type DisciplineLinks = Partial<Record<DisciplineId, DisciplineLink>>;
+export type DisciplineLinks = Partial<Record<DisciplineId, DisciplineLink[]>>;
 
 export interface AppBackupData {
   version: string;
