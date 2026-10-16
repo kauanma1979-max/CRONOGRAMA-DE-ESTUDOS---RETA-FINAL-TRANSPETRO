@@ -247,10 +247,10 @@ export default function App() {
     ]
   );
 
-  // Save or update discipline link (appends new or updates existing)
-  const handleSaveDisciplineLink = useCallback((disciplineId: DisciplineId, link: DisciplineLink) => {
+  // Save or update topic/subtopic link (appends new or updates existing)
+  const handleSaveDisciplineLink = useCallback((topicKey: string, link: DisciplineLink) => {
     setDisciplineLinks((prev) => {
-      const currentList = prev[disciplineId] || [];
+      const currentList = prev[topicKey] || [];
       const index = currentList.findIndex((item) => item.id === link.id);
       let updatedList: DisciplineLink[];
       if (index >= 0) {
@@ -259,23 +259,23 @@ export default function App() {
       } else {
         updatedList = [...currentList, link];
       }
-      const updated = { ...prev, [disciplineId]: updatedList };
+      const updated = { ...prev, [topicKey]: updatedList };
       saveStoredDisciplineLinks(updated);
       return updated;
     });
   }, []);
 
-  // Delete a specific discipline link by id (or clear all if no linkId)
-  const handleDeleteDisciplineLink = useCallback((disciplineId: DisciplineId, linkId?: string) => {
+  // Delete a specific link by id for a topicKey (or clear all if no linkId)
+  const handleDeleteDisciplineLink = useCallback((topicKey: string, linkId?: string) => {
     setDisciplineLinks((prev) => {
-      const currentList = prev[disciplineId] || [];
+      const currentList = prev[topicKey] || [];
       let updatedList: DisciplineLink[];
       if (linkId) {
         updatedList = currentList.filter((item) => item.id !== linkId);
       } else {
         updatedList = [];
       }
-      const updated = { ...prev, [disciplineId]: updatedList };
+      const updated = { ...prev, [topicKey]: updatedList };
       saveStoredDisciplineLinks(updated);
       return updated;
     });

@@ -141,20 +141,20 @@ export function normalizeDisciplineLinks(raw: any): DisciplineLinks {
   if (!raw || typeof raw !== 'object') return {};
   const normalized: DisciplineLinks = {};
   for (const [key, val] of Object.entries(raw)) {
-    const discKey = key as DisciplineId;
+    const topicKey = String(key);
     if (Array.isArray(val)) {
-      normalized[discKey] = val
+      normalized[topicKey] = val
         .map((item: any, idx: number) => ({
-          id: item?.id ? String(item.id) : `link_${discKey}_${Date.now()}_${idx}`,
+          id: item?.id ? String(item.id) : `link_${topicKey}_${Date.now()}_${idx}`,
           url: typeof item?.url === 'string' ? item.url.trim() : '',
           title: item?.title ? String(item.title).trim() : undefined,
           updatedAt: typeof item?.updatedAt === 'number' ? item.updatedAt : Date.now(),
         }))
         .filter((item) => !!item.url);
     } else if (val && typeof val === 'object' && (val as any).url) {
-      normalized[discKey] = [
+      normalized[topicKey] = [
         {
-          id: (val as any).id ? String((val as any).id) : `link_${discKey}_0_${Date.now()}`,
+          id: (val as any).id ? String((val as any).id) : `link_${topicKey}_0_${Date.now()}`,
           url: String((val as any).url).trim(),
           title: (val as any).title ? String((val as any).title).trim() : undefined,
           updatedAt: (val as any).updatedAt || Date.now(),

@@ -99,7 +99,7 @@ export interface DisciplineLink {
   updatedAt?: number;
 }
 
-export type DisciplineLinks = Partial<Record<DisciplineId, DisciplineLink[]>>;
+export type DisciplineLinks = Record<string, DisciplineLink[]>;
 
 export interface AppBackupData {
   version: string;

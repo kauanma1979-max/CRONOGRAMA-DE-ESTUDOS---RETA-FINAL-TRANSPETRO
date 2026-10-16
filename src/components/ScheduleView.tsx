@@ -46,8 +46,8 @@ interface ScheduleViewProps {
   initialViewMode?: 'daily' | 'weekly' | 'reta_final';
   onViewModeChange?: (mode: 'daily' | 'weekly' | 'reta_final') => void;
   disciplineLinks?: DisciplineLinks;
-  onSaveDisciplineLink?: (disciplineId: DisciplineId, link: DisciplineLink) => void;
-  onDeleteDisciplineLink?: (disciplineId: DisciplineId, linkId?: string) => void;
+  onSaveDisciplineLink?: (topicKey: string, link: DisciplineLink) => void;
+  onDeleteDisciplineLink?: (topicKey: string, linkId?: string) => void;
 }
 
 export const ScheduleView: React.FC<ScheduleViewProps> = ({
@@ -91,17 +91,32 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
   const [filterDiscipline, setFilterDiscipline] = useState<DisciplineId | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [retaFinalLayout, setRetaFinalLayout] = useState<'single_day' | 'all_days'>('single_day');
+  const [modalTopicKey, setModalTopicKey] = useState<string | null>(null);
+  const [modalTopicTitle, setModalTopicTitle] = useState<string>('');
   const [modalDisciplineId, setModalDisciplineId] = useState<DisciplineId | null>(null);
   const [modalLinkToEdit, setModalLinkToEdit] = useState<DisciplineLink | null>(null);
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
 
-  const handleOpenAddLinkModal = (disciplineId: DisciplineId) => {
+  const handleOpenAddLinkModal = (
+    topicKey: string,
+    topicTitle: string,
+    disciplineId: DisciplineId
+  ) => {
+    setModalTopicKey(topicKey);
+    setModalTopicTitle(topicTitle);
     setModalDisciplineId(disciplineId);
     setModalLinkToEdit(null);
     setIsLinkModalOpen(true);
   };
 
-  const handleOpenEditLinkModal = (disciplineId: DisciplineId, link: DisciplineLink) => {
+  const handleOpenEditLinkModal = (
+    topicKey: string,
+    topicTitle: string,
+    disciplineId: DisciplineId,
+    link: DisciplineLink
+  ) => {
+    setModalTopicKey(topicKey);
+    setModalTopicTitle(topicTitle);
     setModalDisciplineId(disciplineId);
     setModalLinkToEdit(link);
     setIsLinkModalOpen(true);
@@ -295,9 +310,19 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
     .reduce((acc, s) => acc + s.targetMinutes, 0);
   const isSunday = new Date(selectedDate.replace(/-/g, '/')).getDay() === 0;
 
-  const renderDisciplineLinkSection = (disciplineId: DisciplineId) => {
-    const links = disciplineLinks?.[disciplineId] || [];
-    const disc = DISCIPLINES.find((d) => d.id === disciplineId);
+  const getSessionTopicInfo = (session: StudySession) => {
+    const topicKey = session.microTopicId || session.disciplineId;
+    const disc = DISCIPLINES.find((d) => d.id === session.disciplineId);
+    const micro = session.microTopicId
+      ? MICRO_TOPICS.find((m) => m.id === session.microTopicId)
+      : undefined;
+    const topicTitle = micro?.title || session.title;
+    return { topicKey, topicTitle, disc };
+  };
+
+  const renderDisciplineLinkSection = (session: StudySession) => {
+    const { topicKey, topicTitle, disc } = getSessionTopicInfo(session);
+    const links = disciplineLinks?.[topicKey] || [];
 
     if (links.length === 0) {
       return (
@@ -306,13 +331,13 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              handleOpenAddLinkModal(disciplineId);
+              handleOpenAddLinkModal(topicKey, topicTitle, session.disciplineId);
             }}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-950/70 hover:bg-slate-800 text-slate-400 hover:text-amber-300 border border-dashed border-slate-700/80 hover:border-amber-500/50 transition-all group active:scale-95 shadow-sm"
-            title={`Inserir link para ${disc?.name || 'esta matéria'}`}
+            title={`Inserir link para o subtópico: ${topicTitle}`}
           >
             <Plus className="w-3.5 h-3.5 text-amber-400 group-hover:scale-110 transition-transform" />
-            <span>+ Inserir Link da Matéria</span>
+            <span>+ Inserir Link do Subtópico</span>
           </button>
         </div>
       );
@@ -320,10 +345,13 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
 
     return (
       <div className="mt-2.5 space-y-1.5">
-        {/* Lista de Links da Matéria */}
+        {/* Lista de Links do Subtópico */}
         <div className="space-y-1.5">
           {links.map((link, idx) => {
-            const targetUrl = link.url.startsWith('http://') || link.url.startsWith('https://') ? link.url : `https://${link.url}`;
+            const targetUrl =
+              link.url.startsWith('http://') || link.url.startsWith('https://')
+                ? link.url
+                : `https://${link.url}`;
             return (
               <div
                 key={link.id || idx}
@@ -358,7 +386,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleOpenEditLinkModal(disciplineId, link);
+                      handleOpenEditLinkModal(topicKey, topicTitle, session.disciplineId, link);
                     }}
                     className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors text-xs font-medium flex items-center gap-1"
                     title="Editar este link"
@@ -371,7 +399,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                     onClick={(e) => {
                       e.stopPropagation();
                       if (onDeleteDisciplineLink) {
-                        onDeleteDisciplineLink(disciplineId, link.id);
+                        onDeleteDisciplineLink(topicKey, link.id);
                       }
                     }}
                     className="p-1 rounded-lg bg-slate-800 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 transition-colors text-xs"
@@ -385,23 +413,23 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
           })}
         </div>
 
-        {/* Botão para inserir quantos links forem necessários */}
+        {/* Botão para inserir quantos links forem necessários no subtópico */}
         <div className="pt-0.5 flex items-center justify-between gap-2">
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              handleOpenAddLinkModal(disciplineId);
+              handleOpenAddLinkModal(topicKey, topicTitle, session.disciplineId);
             }}
             className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-900/90 hover:bg-slate-800 text-amber-300 hover:text-amber-200 border border-dashed border-amber-500/30 hover:border-amber-500/60 transition-all active:scale-95 group shadow-sm"
-            title={`Inserir mais um link para ${disc?.name || 'esta matéria'}`}
+            title={`Inserir mais um link para este subtópico`}
           >
             <Plus className="w-3 h-3 text-amber-400 group-hover:scale-110 transition-transform" />
             <span>+ Adicionar outro Link</span>
           </button>
 
           <span className="text-[10px] text-slate-400">
-            {links.length} {links.length === 1 ? 'link sincronizado' : 'links sincronizados'} ({disc?.shortName})
+            {links.length} {links.length === 1 ? 'link sincronizado' : 'links sincronizados'} neste subtópico
           </span>
         </div>
       </div>
@@ -477,8 +505,8 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
             💡 <strong>Foco Cesgranrio:</strong> {session.subtitle || 'Revisão intensiva de questões estilo Cesgranrio.'}
           </p>
 
-          {/* Link da Matéria (Logo abaixo de Foco Cesgranrio) */}
-          {renderDisciplineLinkSection(session.disciplineId)}
+          {/* Link do Subtópico / Tema (Logo abaixo de Foco Cesgranrio) */}
+          {renderDisciplineLinkSection(session)}
         </div>
 
         {/* Footer with Timer Launch Button */}
@@ -916,8 +944,8 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                                 : 'Revisão direcionada e resolução de questões Cesgranrio.')}
                           </p>
 
-                          {/* Link da Matéria (Logo abaixo de Foco Cesgranrio) */}
-                          {renderDisciplineLinkSection(session.disciplineId)}
+                          {/* Link do Subtópico / Tema (Logo abaixo de Foco Cesgranrio) */}
+                          {renderDisciplineLinkSection(session)}
                         </div>
                       </div>
 
@@ -1267,24 +1295,26 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
         </div>
       )}
 
-      {/* Modal para Inserção, Edição e Exclusão de Links da Matéria */}
+      {/* Modal para Inserção, Edição e Exclusão de Links do Subtópico / Tema */}
       <DisciplineLinkModal
         isOpen={isLinkModalOpen}
         onClose={() => {
           setIsLinkModalOpen(false);
           setModalLinkToEdit(null);
         }}
+        topicKey={modalTopicKey}
+        topicTitle={modalTopicTitle}
         disciplineId={modalDisciplineId}
         linkToEdit={modalLinkToEdit}
-        existingLinks={modalDisciplineId && disciplineLinks ? disciplineLinks[modalDisciplineId] || [] : []}
-        onSave={(discId, link) => {
+        existingLinks={modalTopicKey && disciplineLinks ? disciplineLinks[modalTopicKey] || [] : []}
+        onSave={(key, link) => {
           if (onSaveDisciplineLink) {
-            onSaveDisciplineLink(discId, link);
+            onSaveDisciplineLink(key, link);
           }
         }}
-        onDelete={(discId, linkId) => {
+        onDelete={(key, linkId) => {
           if (onDeleteDisciplineLink) {
-            onDeleteDisciplineLink(discId, linkId);
+            onDeleteDisciplineLink(key, linkId);
           }
         }}
         onSelectLinkToEdit={(link) => setModalLinkToEdit(link)}

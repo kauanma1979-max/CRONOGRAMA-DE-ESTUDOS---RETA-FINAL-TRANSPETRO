@@ -17,17 +17,21 @@ import { DISCIPLINES } from '../data/paretoData';
 interface DisciplineLinkModalProps {
   isOpen: boolean;
   onClose: () => void;
+  topicKey: string | null;
+  topicTitle?: string;
   disciplineId: DisciplineId | null;
   linkToEdit?: DisciplineLink | null;
   existingLinks?: DisciplineLink[];
-  onSave: (disciplineId: DisciplineId, link: DisciplineLink) => void;
-  onDelete: (disciplineId: DisciplineId, linkId: string) => void;
+  onSave: (topicKey: string, link: DisciplineLink) => void;
+  onDelete: (topicKey: string, linkId: string) => void;
   onSelectLinkToEdit?: (link: DisciplineLink | null) => void;
 }
 
 export const DisciplineLinkModal: React.FC<DisciplineLinkModalProps> = ({
   isOpen,
   onClose,
+  topicKey,
+  topicTitle,
   disciplineId,
   linkToEdit,
   existingLinks = [],
@@ -42,7 +46,7 @@ export const DisciplineLinkModal: React.FC<DisciplineLinkModalProps> = ({
 
   const discipline = DISCIPLINES.find((d) => d.id === disciplineId);
 
-  // Sync state when modal opens or linkToEdit changes
+  // Sync state when modal opens, topicKey changes, or linkToEdit changes
   useEffect(() => {
     if (isOpen) {
       setUrl(linkToEdit?.url || '');
@@ -50,9 +54,9 @@ export const DisciplineLinkModal: React.FC<DisciplineLinkModalProps> = ({
       setError(null);
       setIsConfirmingDelete(false);
     }
-  }, [isOpen, linkToEdit, disciplineId]);
+  }, [isOpen, linkToEdit, topicKey]);
 
-  if (!isOpen || !disciplineId || !discipline) return null;
+  if (!isOpen || !topicKey || !disciplineId || !discipline) return null;
 
   const normalizeUrl = (raw: string): string => {
     const trimmed = raw.trim();
@@ -64,7 +68,7 @@ export const DisciplineLinkModal: React.FC<DisciplineLinkModalProps> = ({
   };
 
   const generateId = (): string => {
-    return `link_${disciplineId}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    return `link_${topicKey}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
   };
 
   const handleSave = (e?: React.FormEvent, andKeepOpenForNext = false) => {
@@ -90,10 +94,10 @@ export const DisciplineLinkModal: React.FC<DisciplineLinkModalProps> = ({
       updatedAt: Date.now(),
     };
 
-    onSave(disciplineId, linkPayload);
+    onSave(topicKey, linkPayload);
 
     if (andKeepOpenForNext) {
-      // Clear form and stay in "New Link" mode to insert another link immediately
+      // Clear form and stay in "New Link" mode to insert another link immediately for this subtopic
       setUrl('');
       setTitle('');
       setError(null);
@@ -112,7 +116,7 @@ export const DisciplineLinkModal: React.FC<DisciplineLinkModalProps> = ({
       setIsConfirmingDelete(true);
       return;
     }
-    onDelete(disciplineId, linkToEdit.id);
+    onDelete(topicKey, linkToEdit.id);
     onClose();
   };
 
@@ -130,25 +134,25 @@ export const DisciplineLinkModal: React.FC<DisciplineLinkModalProps> = ({
       >
         {/* Header */}
         <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-800">
-          <div className="flex items-center gap-3">
+          <div className="flex items-start gap-3">
             <div
-              className={`p-2.5 rounded-xl border ${discipline.bgColor} ${discipline.borderColor} ${discipline.textColor}`}
+              className={`p-2.5 rounded-xl border mt-0.5 shrink-0 ${discipline.bgColor} ${discipline.borderColor} ${discipline.textColor}`}
             >
               <Link2 className="w-5 h-5" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span
                   className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${discipline.bgColor} ${discipline.borderColor} ${discipline.textColor}`}
                 >
                   {discipline.shortName}
                 </span>
-                <span className="text-xs text-amber-400 font-mono font-semibold">
-                  {isEditing ? 'Editar Link' : 'Inserir Novo Link'}
+                <span className="text-[11px] text-amber-400 font-mono font-semibold uppercase tracking-wider">
+                  {isEditing ? 'Editar Link' : 'Novo Link no Subtópico'}
                 </span>
               </div>
-              <h3 className="text-base sm:text-lg font-black text-white mt-0.5">
-                Links de {discipline.name}
+              <h3 className="text-sm sm:text-base font-bold text-white mt-1 leading-snug">
+                {topicTitle || discipline.name}
               </h3>
             </div>
           </div>
@@ -156,28 +160,26 @@ export const DisciplineLinkModal: React.FC<DisciplineLinkModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors shrink-0"
             title="Fechar modal"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Global Propagation Notice */}
+        {/* Subtopic Sync Notice */}
         <div className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-200/90 leading-relaxed">
           <Info className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
           <div>
-            <strong>Sincronização em todo o cronograma:</strong> Os links cadastrados nesta matéria
-            aparecerão automaticamente em <strong>todas as aulas de {discipline.name}</strong>, tanto
-            nas datas anteriores quanto nos próximos dias e na Reta Final.
+            <strong>Sincronização por Subtópico/Tema:</strong> Os links cadastrados aqui acompanharão especificamente <strong>este subtópico</strong> todas as vezes que ele aparecer para ser estudado ao longo do cronograma (dias anteriores, próximos dias e Reta Final).
           </div>
         </div>
 
-        {/* Existing links chips/switcher (if user has multiple links) */}
+        {/* Existing links chips/switcher (if subtopic has multiple links) */}
         {existingLinks.length > 0 && (
           <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800 space-y-2">
             <div className="flex items-center justify-between text-xs text-slate-400 font-medium">
-              <span>Links cadastrados nesta matéria ({existingLinks.length}):</span>
+              <span>Links cadastrados neste subtópico ({existingLinks.length}):</span>
               {isEditing && (
                 <button
                   type="button"
@@ -243,7 +245,7 @@ export const DisciplineLinkModal: React.FC<DisciplineLinkModalProps> = ({
                 setUrl(e.target.value);
                 if (error) setError(null);
               }}
-              placeholder="Ex: drive.google.com/drive/folders/... ou notion.so/..."
+              placeholder="Ex: drive.google.com/... ou qconcursos.com/... ou notion.so/..."
               className="w-full bg-slate-950 border border-slate-700 focus:border-amber-500 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none transition-colors"
               autoFocus
             />
@@ -265,11 +267,11 @@ export const DisciplineLinkModal: React.FC<DisciplineLinkModalProps> = ({
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Ex: Pasta Google Drive, Resumo Teórico, Lista de Questões Cesgranrio..."
+              placeholder="Ex: Videoaula Teórica, Questões Cesgranrio, Apostila PDF..."
               className="w-full bg-slate-950 border border-slate-700 focus:border-amber-500 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none transition-colors"
             />
             <p className="text-[11px] text-slate-500">
-              Nome de identificação do link (ex: &quot;Apostila Bloco 1&quot;, &quot;Simulado Cesgranrio&quot;).
+              Nome de identificação do link (ex: &quot;Videoaula Aula 01&quot;, &quot;Simulado Cesgranrio&quot;).
             </p>
           </div>
 
@@ -303,7 +305,7 @@ export const DisciplineLinkModal: React.FC<DisciplineLinkModalProps> = ({
                       ? 'bg-rose-600 hover:bg-rose-700 text-white animate-pulse'
                       : 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30'
                   }`}
-                  title="Remover este link da matéria"
+                  title="Remover este link do subtópico"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   <span>{isConfirmingDelete ? 'Confirmar Exclusão?' : 'Excluir Este Link'}</span>
@@ -325,7 +327,7 @@ export const DisciplineLinkModal: React.FC<DisciplineLinkModalProps> = ({
                   type="button"
                   onClick={(e) => handleSave(e, true)}
                   className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold text-xs flex items-center gap-1.5 border border-amber-500/30 transition-all active:scale-95"
-                  title="Salva este link e mantém aberto para inserir o próximo"
+                  title="Salva este link e mantém aberto para inserir o próximo neste subtópico"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Salvar e Adicionar Outro</span>
