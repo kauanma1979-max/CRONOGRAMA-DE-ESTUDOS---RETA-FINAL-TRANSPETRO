@@ -10,7 +10,7 @@ import {
   Check,
   ShieldCheck,
 } from 'lucide-react';
-import { StudySession, SessionLog, AppBackupData, DisciplineLinks } from '../types';
+import { StudySession, SessionLog, AppBackupData, DisciplineLinks, DailyQuestionsState } from '../types';
 import { exportBackupData, validateAndParseBackup } from '../utils/storage';
 import { formatSecondsToDigital } from '../utils/scheduleGenerator';
 
@@ -20,6 +20,7 @@ interface BackupViewProps {
   completedMicroTopicIds: string[];
   totalLiquidSeconds: number;
   disciplineLinks?: DisciplineLinks;
+  dailyQuestionsProgress?: DailyQuestionsState;
   onRestoreBackup: (backup: AppBackupData) => void;
   onResetToDefaults: () => void;
 }
@@ -30,6 +31,7 @@ export const BackupView: React.FC<BackupViewProps> = ({
   completedMicroTopicIds,
   totalLiquidSeconds,
   disciplineLinks,
+  dailyQuestionsProgress,
   onRestoreBackup,
   onResetToDefaults,
 }) => {
@@ -47,7 +49,8 @@ export const BackupView: React.FC<BackupViewProps> = ({
       completedMicroTopicIds,
       totalLiquidSeconds,
       {},
-      disciplineLinks
+      disciplineLinks,
+      dailyQuestionsProgress
     );
   };
 
@@ -61,9 +64,12 @@ export const BackupView: React.FC<BackupViewProps> = ({
         const text = evt.target?.result as string;
         const backup = validateAndParseBackup(text);
         onRestoreBackup(backup);
+        const dailyQuestionsCount = Object.values(backup.dailyQuestionsProgress || {}).filter(
+          (v) => v.completed
+        ).length;
         setRestoreStatus({
           type: 'success',
-          message: `Backup restaurado com sucesso! ${backup.sessions.length} sessões e ${backup.sessionLogs.length} logs importados.`,
+          message: `Backup restaurado com sucesso! ${backup.sessions.length} sessões, ${backup.sessionLogs.length} logs e ${dailyQuestionsCount} subtópicos de questões diárias importados.`,
         });
       } catch (err: any) {
         setRestoreStatus({
@@ -77,6 +83,9 @@ export const BackupView: React.FC<BackupViewProps> = ({
   };
 
   const completedSessionsCount = sessions.filter((s) => s.completed).length;
+  const completedDailyQuestionsCount = Object.values(dailyQuestionsProgress || {}).filter(
+    (v) => v.completed
+  ).length;
 
   const currentSummaryJson = JSON.stringify(
     {
@@ -85,6 +94,7 @@ export const BackupView: React.FC<BackupViewProps> = ({
       totalSessions: sessions.length,
       completedSessions: completedSessionsCount,
       completedMicroTopics: completedMicroTopicIds.length,
+      completedDailyQuestions: completedDailyQuestionsCount,
       totalLiquidSeconds,
       totalLiquidFormatted: formatSecondsToDigital(totalLiquidSeconds),
       totalLogs: sessionLogs.length,

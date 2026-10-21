@@ -6,11 +6,12 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Header } from './components/Header';
 import { ScheduleView } from './components/ScheduleView';
+import { DailyQuestionsView } from './components/DailyQuestionsView';
 import { ParetoExplorer } from './components/ParetoExplorer';
 import { MetricsAndTimerView } from './components/MetricsAndTimerView';
 import { BackupView } from './components/BackupView';
 import { LiquidTimerModal } from './components/LiquidTimerModal';
-import { StudySession, SessionLog, AppBackupData, DisciplineId, DisciplineLinks, DisciplineLink } from './types';
+import { StudySession, SessionLog, AppBackupData, DisciplineId, DisciplineLinks, DisciplineLink, DailyQuestionsState } from './types';
 import {
   getStoredSessions,
   saveStoredSessions,
@@ -22,12 +23,14 @@ import {
   saveStoredTotalLiquidSeconds,
   getStoredDisciplineLinks,
   saveStoredDisciplineLinks,
+  getStoredDailyQuestions,
+  saveStoredDailyQuestions,
   exportBackupData,
 } from './utils/storage';
 import { generateInitialSchedule } from './utils/scheduleGenerator';
 
 export default function App() {
-  const [currentTab, setCurrentTab] = useState<'schedule' | 'reta_final' | 'pareto' | 'timer' | 'backup'>('schedule');
+  const [currentTab, setCurrentTab] = useState<'schedule' | 'reta_final' | 'questoes_diarias' | 'pareto' | 'timer' | 'backup'>('schedule');
 
   // Persistence States
   const [sessions, setSessions] = useState<StudySession[]>(() => getStoredSessions());
@@ -40,6 +43,9 @@ export default function App() {
   );
   const [disciplineLinks, setDisciplineLinks] = useState<DisciplineLinks>(() =>
     getStoredDisciplineLinks()
+  );
+  const [dailyQuestionsState, setDailyQuestionsState] = useState<DailyQuestionsState>(() =>
+    getStoredDailyQuestions()
   );
 
   // Timer States
@@ -281,6 +287,12 @@ export default function App() {
     });
   }, []);
 
+  // Update daily questions state
+  const handleUpdateDailyQuestionsState = useCallback((newState: DailyQuestionsState) => {
+    setDailyQuestionsState(newState);
+    saveStoredDailyQuestions(newState);
+  }, []);
+
   // Restore backup
   const handleRestoreBackup = useCallback(
     (backup: AppBackupData) => {
@@ -299,6 +311,11 @@ export default function App() {
       if (backup.disciplineLinks) {
         setDisciplineLinks(backup.disciplineLinks);
         saveStoredDisciplineLinks(backup.disciplineLinks);
+      }
+
+      if (backup.dailyQuestionsProgress) {
+        setDailyQuestionsState(backup.dailyQuestionsProgress);
+        saveStoredDailyQuestions(backup.dailyQuestionsProgress);
       }
 
       setIsTimerRunning(false);
@@ -321,6 +338,8 @@ export default function App() {
     saveStoredTotalLiquidSeconds(0);
     setDisciplineLinks({});
     saveStoredDisciplineLinks({});
+    setDailyQuestionsState({});
+    saveStoredDailyQuestions({});
     setIsTimerRunning(false);
     setTimerElapsedSeconds(0);
     setActiveTimerSession(null);
@@ -348,7 +367,8 @@ export default function App() {
             completedMicroTopicIds,
             totalLiquidSeconds,
             {},
-            disciplineLinks
+            disciplineLinks,
+            dailyQuestionsState
           )
         }
         onQuickRestoreClick={() => setCurrentTab('backup')}
@@ -373,6 +393,16 @@ export default function App() {
                 setCurrentTab('schedule');
               }
             }}
+          />
+        )}
+
+        {currentTab === 'questoes_diarias' && (
+          <DailyQuestionsView
+            dailyQuestionsState={dailyQuestionsState}
+            onUpdateDailyQuestionsState={handleUpdateDailyQuestionsState}
+            disciplineLinks={disciplineLinks}
+            onSaveDisciplineLink={handleSaveDisciplineLink}
+            onDeleteDisciplineLink={handleDeleteDisciplineLink}
           />
         )}
 
@@ -406,6 +436,7 @@ export default function App() {
             completedMicroTopicIds={completedMicroTopicIds}
             totalLiquidSeconds={totalLiquidSeconds}
             disciplineLinks={disciplineLinks}
+            dailyQuestionsProgress={dailyQuestionsState}
             onRestoreBackup={handleRestoreBackup}
             onResetToDefaults={handleResetToDefaults}
           />

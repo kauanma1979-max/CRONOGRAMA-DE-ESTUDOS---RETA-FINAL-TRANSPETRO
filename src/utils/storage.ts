@@ -1,4 +1,4 @@
-import { StudySession, SessionLog, AppBackupData, DisciplineLinks, DisciplineId } from '../types';
+import { StudySession, SessionLog, AppBackupData, DisciplineLinks, DisciplineId, DailyQuestionsState } from '../types';
 import { generateInitialSchedule } from './scheduleGenerator';
 
 const STORAGE_KEY_SESSIONS = 'pareto_study_sessions_v8';
@@ -7,6 +7,7 @@ const STORAGE_KEY_COMPLETED_TOPICS = 'pareto_study_completed_topics_v1';
 const STORAGE_KEY_TOTAL_SECONDS = 'pareto_study_total_liquid_sec_v1';
 const STORAGE_KEY_NOTES = 'pareto_study_topic_notes_v1';
 const STORAGE_KEY_DISCIPLINE_LINKS = 'pareto_study_discipline_links_v1';
+const STORAGE_KEY_DAILY_QUESTIONS = 'pareto_study_daily_questions_v1';
 
 export function getStoredSessions(): StudySession[] {
   const initial = generateInitialSchedule();
@@ -195,13 +196,37 @@ export function saveStoredDisciplineLinks(links: DisciplineLinks): void {
   }
 }
 
+export function getStoredDailyQuestions(): DailyQuestionsState {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_DAILY_QUESTIONS);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        return parsed;
+      }
+    }
+  } catch (err) {
+    console.error('Error loading daily questions progress', err);
+  }
+  return {};
+}
+
+export function saveStoredDailyQuestions(state: DailyQuestionsState): void {
+  try {
+    localStorage.setItem(STORAGE_KEY_DAILY_QUESTIONS, JSON.stringify(state));
+  } catch (err) {
+    console.error('Error saving daily questions progress', err);
+  }
+}
+
 export function exportBackupData(
   sessions: StudySession[],
   sessionLogs: SessionLog[],
   completedMicroTopicIds: string[],
   totalLiquidSeconds: number,
   notesByTopic: Record<string, string>,
-  disciplineLinks?: DisciplineLinks
+  disciplineLinks?: DisciplineLinks,
+  dailyQuestionsProgress?: DailyQuestionsState
 ): void {
   const data: AppBackupData = {
     version: '1.0.0',
@@ -213,6 +238,7 @@ export function exportBackupData(
     totalLiquidSeconds,
     notesByTopic,
     disciplineLinks,
+    dailyQuestionsProgress,
   };
 
   const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(data, null, 2))}`;
@@ -245,5 +271,9 @@ export function validateAndParseBackup(fileContent: string): AppBackupData {
     totalLiquidSeconds: Number(parsed.totalLiquidSeconds) || 0,
     notesByTopic: parsed.notesByTopic && typeof parsed.notesByTopic === 'object' ? parsed.notesByTopic : {},
     disciplineLinks: parsed.disciplineLinks ? normalizeDisciplineLinks(parsed.disciplineLinks) : {},
+    dailyQuestionsProgress:
+      parsed.dailyQuestionsProgress && typeof parsed.dailyQuestionsProgress === 'object'
+        ? parsed.dailyQuestionsProgress
+        : {},
   };
 }

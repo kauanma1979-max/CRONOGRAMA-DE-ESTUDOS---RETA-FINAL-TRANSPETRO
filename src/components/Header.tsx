@@ -9,12 +9,15 @@ import {
   Pause,
   Award,
   Flame,
+  CheckSquare,
 } from 'lucide-react';
 import { formatSecondsToDigital } from '../utils/scheduleGenerator';
 
 interface HeaderProps {
-  currentTab: 'schedule' | 'reta_final' | 'pareto' | 'timer' | 'backup';
-  setCurrentTab: (tab: 'schedule' | 'reta_final' | 'pareto' | 'timer' | 'backup') => void;
+  currentTab: 'schedule' | 'reta_final' | 'questoes_diarias' | 'pareto' | 'timer' | 'backup';
+  setCurrentTab: (
+    tab: 'schedule' | 'reta_final' | 'questoes_diarias' | 'pareto' | 'timer' | 'backup'
+  ) => void;
   totalLiquidSeconds: number;
   isTimerRunning: boolean;
   onToggleTimer: () => void;
@@ -164,6 +167,19 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="hidden sm:inline-block text-[10px] px-1.5 py-0.2 rounded-full bg-slate-950/60 font-mono font-bold text-amber-300">
                 6h/dia
               </span>
+            </button>
+
+            <button
+              id="nav-tab-questoes-diarias"
+              onClick={() => setCurrentTab('questoes_diarias')}
+              className={`px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold flex items-center gap-2 transition-all whitespace-nowrap ${
+                currentTab === 'questoes_diarias'
+                  ? 'bg-emerald-500 text-slate-950 font-black shadow-md shadow-emerald-500/20'
+                  : 'text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10'
+              }`}
+            >
+              <CheckSquare className="w-4 h-4" />
+              <span>QUESTÕES DIÁRIAS</span>
             </button>
 
             <button

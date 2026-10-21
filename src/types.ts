@@ -101,6 +101,14 @@ export interface DisciplineLink {
 
 export type DisciplineLinks = Record<string, DisciplineLink[]>;
 
+export interface DailyQuestionProgress {
+  completed: boolean;
+  questionsCount?: number;
+  lastUpdatedAt?: number;
+}
+
+export type DailyQuestionsState = Record<string, DailyQuestionProgress>;
+
 export interface AppBackupData {
   version: string;
   exportDate: string;
@@ -111,4 +119,5 @@ export interface AppBackupData {
   totalLiquidSeconds: number;
   notesByTopic: Record<string, string>;
   disciplineLinks?: DisciplineLinks;
+  dailyQuestionsProgress?: DailyQuestionsState;
 }
