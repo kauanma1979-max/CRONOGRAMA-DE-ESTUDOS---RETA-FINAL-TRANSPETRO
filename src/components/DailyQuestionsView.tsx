@@ -16,6 +16,9 @@ import {
   ChevronRight,
   Clock,
   Sparkles,
+  Link2,
+  Edit3,
+  Trash2,
 } from 'lucide-react';
 import {
   DAILY_QUESTIONS_50_DAYS,
@@ -63,6 +66,25 @@ export const DailyQuestionsView: React.FC<DailyQuestionsViewProps> = ({
     setModalDisciplineId(disciplineId);
     setModalLinkToEdit(null);
     setIsLinkModalOpen(true);
+  };
+
+  const handleOpenEditLink = (
+    topicKey: string,
+    topicTitle: string,
+    disciplineId: DisciplineId,
+    link: DisciplineLink
+  ) => {
+    setModalTopicKey(topicKey);
+    setModalTopicTitle(topicTitle);
+    setModalDisciplineId(disciplineId);
+    setModalLinkToEdit(link);
+    setIsLinkModalOpen(true);
+  };
+
+  const handleDeleteLink = (topicKey: string, linkId: string) => {
+    if (onDeleteDisciplineLink) {
+      onDeleteDisciplineLink(topicKey, linkId);
+    }
   };
 
   // Toggle single block completed state
@@ -653,12 +675,20 @@ export const DailyQuestionsView: React.FC<DailyQuestionsViewProps> = ({
                     const itemState = dailyQuestionsState[block.id];
                     const isCompleted = Boolean(itemState?.completed);
 
-                    // Check if discipline links exist for this subtopic or discipline
-                    const topicLinks =
-                      disciplineLinks[block.microTopicId] ||
-                      disciplineLinks[block.id] ||
-                      disciplineLinks[block.disciplineId] ||
-                      [];
+                    // Check if discipline links exist for this subtopic or block
+                    const blockLinks = disciplineLinks[block.id] || [];
+                    const microLinks = disciplineLinks[block.microTopicId] || [];
+
+                    // Combine unique links
+                    const seenLinks = new Set<string>();
+                    const topicLinks: DisciplineLink[] = [];
+                    [...blockLinks, ...microLinks].forEach((l) => {
+                      const key = l.id || l.url;
+                      if (!seenLinks.has(key)) {
+                        seenLinks.add(key);
+                        topicLinks.push(l);
+                      }
+                    });
 
                     const theme = getDisciplineTheme(block.disciplineId);
 
@@ -709,9 +739,146 @@ export const DailyQuestionsView: React.FC<DailyQuestionsViewProps> = ({
                               {block.summary}
                             </p>
                           )}
+
+                          {/* Links diretos cadastrados no card */}
+                          {topicLinks.length > 0 ? (
+                            <div className="mt-3 pt-2.5 border-t border-slate-800/80 space-y-1.5">
+                              <div className="flex items-center justify-between">
+                                <span
+                                  className={`text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 ${
+                                    isCompleted ? 'text-emerald-200' : 'text-slate-400'
+                                  }`}
+                                >
+                                  <Link2 className={`w-3.5 h-3.5 ${isCompleted ? 'text-emerald-300' : 'text-amber-400'}`} />
+                                  <span>Links do Card ({topicLinks.length})</span>
+                                </span>
+
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenLinkModal(
+                                      block.microTopicId,
+                                      block.subtopicTitle,
+                                      block.disciplineId
+                                    );
+                                  }}
+                                  className={`text-[11px] font-bold flex items-center gap-1 px-1.5 py-0.5 rounded transition-colors ${
+                                    isCompleted
+                                      ? 'text-emerald-200 hover:text-white'
+                                      : 'text-amber-400 hover:text-amber-300'
+                                  }`}
+                                  title="Adicionar mais um link a este card"
+                                >
+                                  <Plus className="w-3 h-3" />
+                                  <span>Novo</span>
+                                </button>
+                              </div>
+
+                              {/* Lista de Links Visíveis no Card */}
+                              <div className="space-y-1.5">
+                                {topicLinks.map((link) => {
+                                  const targetUrl =
+                                    link.url.startsWith('http://') || link.url.startsWith('https://')
+                                      ? link.url
+                                      : `https://${link.url}`;
+
+                                  return (
+                                    <div
+                                      key={link.id}
+                                      className={`p-2 rounded-xl border flex items-center justify-between gap-2 transition-all shadow-sm ${
+                                        isCompleted
+                                          ? 'bg-emerald-950/80 border-emerald-500/50 text-emerald-100 hover:border-emerald-400'
+                                          : 'bg-slate-950/90 border-slate-800 hover:border-slate-700 text-slate-200'
+                                      }`}
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <a
+                                        href={targetUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        onClick={(e) => e.stopPropagation()}
+                                        className={`flex items-center gap-1.5 text-xs font-bold truncate flex-1 hover:underline ${
+                                          isCompleted
+                                            ? 'text-emerald-200 hover:text-white'
+                                            : 'text-amber-300 hover:text-amber-200'
+                                        }`}
+                                        title={`Abrir link: ${targetUrl}`}
+                                      >
+                                        <ExternalLink className="w-3.5 h-3.5 shrink-0 opacity-80" />
+                                        <span className="truncate">{link.title || link.url}</span>
+                                      </a>
+
+                                      <div className="flex items-center gap-1 shrink-0">
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleOpenEditLink(
+                                              block.microTopicId,
+                                              block.subtopicTitle,
+                                              block.disciplineId,
+                                              link
+                                            );
+                                          }}
+                                          className={`p-1 rounded-lg text-xs transition-colors ${
+                                            isCompleted
+                                              ? 'hover:bg-emerald-800 text-emerald-300 hover:text-white'
+                                              : 'hover:bg-slate-800 text-slate-400 hover:text-slate-200'
+                                          }`}
+                                          title="Editar este link"
+                                        >
+                                          <Edit3 className="w-3 h-3" />
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeleteLink(block.microTopicId, link.id);
+                                            if (block.id) handleDeleteLink(block.id, link.id);
+                                          }}
+                                          className={`p-1 rounded-lg text-xs transition-colors ${
+                                            isCompleted
+                                              ? 'hover:bg-rose-950/80 text-emerald-300 hover:text-rose-300'
+                                              : 'hover:bg-rose-950/50 text-slate-400 hover:text-rose-400'
+                                          }`}
+                                          title="Excluir este link"
+                                        >
+                                          <Trash2 className="w-3 h-3" />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="mt-3 pt-2.5 border-t border-slate-800/60">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenLinkModal(
+                                    block.microTopicId,
+                                    block.subtopicTitle,
+                                    block.disciplineId
+                                  );
+                                }}
+                                className={`w-full py-1.5 px-2.5 rounded-xl text-xs font-semibold border border-dashed flex items-center justify-center gap-1.5 transition-all ${
+                                  isCompleted
+                                    ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300 hover:bg-emerald-950/70 hover:text-white hover:border-emerald-400'
+                                    : 'bg-slate-950/50 border-slate-700/80 text-slate-400 hover:text-amber-300 hover:border-amber-500/50 hover:bg-slate-950'
+                                }`}
+                                title="Inserir link para este tema"
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                                <span>+ Inserir Link no Card</span>
+                              </button>
+                            </div>
+                          )}
                         </div>
 
-                        {/* Card Bottom Action Row: Ticar Button & Link Button */}
+                        {/* Card Bottom Action Row: Ticar Button & Link Status */}
                         <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2">
                           {/* Check Action Button */}
                           <button
@@ -740,7 +907,7 @@ export const DailyQuestionsView: React.FC<DailyQuestionsViewProps> = ({
                             )}
                           </button>
 
-                          {/* Link Button (Mantenha o Link) */}
+                          {/* Quick link indicator / trigger */}
                           {topicLinks.length > 0 ? (
                             <button
                               type="button"
@@ -755,34 +922,15 @@ export const DailyQuestionsView: React.FC<DailyQuestionsViewProps> = ({
                               className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
                                 isCompleted
                                   ? 'bg-emerald-950/90 hover:bg-emerald-950 text-emerald-200 border border-emerald-400/60 shadow-sm'
-                                  : 'bg-sky-500/10 hover:bg-sky-500/20 text-sky-300 border border-sky-500/30'
+                                  : 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30'
                               }`}
-                              title="Abrir e gerenciar links deste tema"
+                              title="Gerenciar links deste tema"
                             >
-                              <ExternalLink className="w-3.5 h-3.5 text-current" />
+                              <Link2 className="w-3.5 h-3.5 text-current" />
                               <span>{topicLinks.length} {topicLinks.length === 1 ? 'Link' : 'Links'}</span>
                             </button>
                           ) : (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleOpenLinkModal(
-                                  block.microTopicId,
-                                  block.subtopicTitle,
-                                  block.disciplineId
-                                );
-                              }}
-                              className={`px-2.5 py-1.5 rounded-xl text-xs font-medium flex items-center gap-1 transition-all ${
-                                isCompleted
-                                  ? 'bg-emerald-950/70 hover:bg-emerald-950 text-emerald-300 border border-emerald-400/40 opacity-80 group-hover:opacity-100'
-                                  : 'bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-slate-200 border border-slate-700 opacity-80 group-hover:opacity-100'
-                              }`}
-                              title="Adicionar link para este tema"
-                            >
-                              <Plus className="w-3.5 h-3.5" />
-                              <span>Link</span>
-                            </button>
+                            <span className="text-[11px] text-slate-500 font-medium">Sem links</span>
                           )}
                         </div>
                       </div>
