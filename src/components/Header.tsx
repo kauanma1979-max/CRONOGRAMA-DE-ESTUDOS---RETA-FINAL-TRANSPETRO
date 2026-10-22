@@ -10,6 +10,7 @@ import {
   Award,
   Flame,
   CheckSquare,
+  Cloud,
 } from 'lucide-react';
 import { formatSecondsToDigital } from '../utils/scheduleGenerator';
 
@@ -27,6 +28,7 @@ interface HeaderProps {
   totalSessionsCount: number;
   onQuickBackup: () => void;
   onQuickRestoreClick: () => void;
+  onQuickDriveSync?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -41,6 +43,7 @@ export const Header: React.FC<HeaderProps> = ({
   totalSessionsCount,
   onQuickBackup,
   onQuickRestoreClick,
+  onQuickDriveSync,
 }) => {
   const percentDone =
     totalSessionsCount > 0
@@ -133,6 +136,17 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <Upload className="w-3.5 h-3.5 text-sky-400" />
               <span className="hidden sm:inline">Restaurar</span>
+            </button>
+
+            {/* Google Drive Sync button */}
+            <button
+              id="header-drive-sync-btn"
+              onClick={onQuickDriveSync || (() => setCurrentTab('backup'))}
+              className="px-2.5 py-1.5 rounded-xl bg-blue-950/60 hover:bg-blue-900/80 border border-blue-700/50 text-xs font-semibold text-blue-300 hover:text-blue-200 flex items-center gap-1.5 transition-all shadow-sm"
+              title="Sincronizar com Google Drive"
+            >
+              <Cloud className="w-3.5 h-3.5 text-blue-400" />
+              <span className="hidden sm:inline">Drive Sync</span>
             </button>
           </div>
         </div>

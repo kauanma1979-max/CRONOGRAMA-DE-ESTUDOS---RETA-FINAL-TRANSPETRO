@@ -26,7 +26,18 @@ import {
   getStoredDailyQuestions,
   saveStoredDailyQuestions,
   exportBackupData,
+  validateAndParseBackup,
 } from './utils/storage';
+import {
+  getDriveEndpoint,
+  getDriveAutoSync,
+  getDriveSyncValidated,
+  setDriveSyncValidated,
+  setLastDriveSyncDate,
+  savePreSyncSafetyBackup,
+  mergeBackupData,
+  fetchGoogleDriveDataViaJsonp,
+} from './utils/driveSync';
 import { generateInitialSchedule } from './utils/scheduleGenerator';
 
 export default function App() {
@@ -325,6 +336,95 @@ export default function App() {
     []
   );
 
+  // Helper to build current full AppBackupData snapshot
+  const getCurrentBackupData = useCallback((): AppBackupData => {
+    return {
+      version: '1.0.0',
+      exportDate: new Date().toISOString(),
+      appName: 'Cronograma Pareto Transpetro 2026.3',
+      sessions,
+      sessionLogs,
+      completedMicroTopicIds,
+      totalLiquidSeconds,
+      notesByTopic: {},
+      disciplineLinks,
+      dailyQuestionsProgress: dailyQuestionsState,
+    };
+  }, [
+    sessions,
+    sessionLogs,
+    completedMicroTopicIds,
+    totalLiquidSeconds,
+    disciplineLinks,
+    dailyQuestionsState,
+  ]);
+
+  // Listen for the custom 'drive-json-loaded' event as specified in the prompt integration point
+  useEffect(() => {
+    const handleDriveJsonLoaded = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const remoteData = customEvent.detail;
+      if (!remoteData || typeof remoteData !== 'object') {
+        console.warn('drive-json-loaded: payload recebido é inválido', remoteData);
+        return;
+      }
+
+      try {
+        const parsedRemote = validateAndParseBackup(
+          typeof remoteData === 'string' ? remoteData : JSON.stringify(remoteData)
+        );
+
+        // Pre-sync safety snapshot
+        const current = getCurrentBackupData();
+        savePreSyncSafetyBackup(current);
+
+        // Safe merge rule: preserves existing progress and merges remote additions
+        const merged = mergeBackupData(current, parsedRemote);
+        handleRestoreBackup(merged);
+        setDriveSyncValidated(true);
+        setLastDriveSyncDate(new Date().toLocaleString('pt-BR'));
+        console.info('Google Drive JSON integrado com sucesso via evento drive-json-loaded.');
+      } catch (err) {
+        console.error('Falha ao processar dados do evento drive-json-loaded:', err);
+      }
+    };
+
+    window.addEventListener('drive-json-loaded', handleDriveJsonLoaded);
+    return () => {
+      window.removeEventListener('drive-json-loaded', handleDriveJsonLoaded);
+    };
+  }, [getCurrentBackupData, handleRestoreBackup]);
+
+  // Expose window.sincronizarGoogleDrive global caller
+  useEffect(() => {
+    (window as any).sincronizarGoogleDrive = () => {
+      const endpoint = getDriveEndpoint();
+      if (!endpoint || !endpoint.startsWith('https://script.google.com/')) {
+        console.warn('Google Drive Sync: Endpoint não configurado.');
+        return Promise.reject(new Error('Configure a URL do Apps Script.'));
+      }
+      return fetchGoogleDriveDataViaJsonp(endpoint);
+    };
+    return () => {
+      delete (window as any).sincronizarGoogleDrive;
+    };
+  }, []);
+
+  // Automatic sync on app startup ONLY if user validated the integration beforehand
+  useEffect(() => {
+    if (getDriveAutoSync() && getDriveSyncValidated()) {
+      const endpoint = getDriveEndpoint();
+      if (endpoint && endpoint.startsWith('https://script.google.com/')) {
+        const timer = setTimeout(() => {
+          fetchGoogleDriveDataViaJsonp(endpoint).catch((err) => {
+            console.warn('Auto-sync ao iniciar o aplicativo foi ignorado ou falhou:', err);
+          });
+        }, 1000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, []);
+
   // Reset to default schedule
   const handleResetToDefaults = useCallback(() => {
     const fresh = generateInitialSchedule();
@@ -372,6 +472,16 @@ export default function App() {
           )
         }
         onQuickRestoreClick={() => setCurrentTab('backup')}
+        onQuickDriveSync={() => {
+          const endpoint = getDriveEndpoint();
+          if (endpoint && endpoint.startsWith('https://script.google.com/')) {
+            fetchGoogleDriveDataViaJsonp(endpoint).catch(() => {
+              setCurrentTab('backup');
+            });
+          } else {
+            setCurrentTab('backup');
+          }
+        }}
       />
 
       {/* Main Content Area */}

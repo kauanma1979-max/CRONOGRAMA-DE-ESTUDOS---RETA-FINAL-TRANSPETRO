@@ -13,6 +13,7 @@ import {
 import { StudySession, SessionLog, AppBackupData, DisciplineLinks, DailyQuestionsState } from '../types';
 import { exportBackupData, validateAndParseBackup } from '../utils/storage';
 import { formatSecondsToDigital } from '../utils/scheduleGenerator';
+import { DriveSyncPanel } from './DriveSyncPanel';
 
 interface BackupViewProps {
   sessions: StudySession[];
@@ -41,6 +42,27 @@ export const BackupView: React.FC<BackupViewProps> = ({
     type: 'success' | 'error' | null;
     message: string;
   }>({ type: null, message: '' });
+
+  const currentBackupData: AppBackupData = {
+    version: '1.0.0',
+    exportDate: new Date().toISOString(),
+    appName: 'Cronograma Pareto Transpetro 2026.3',
+    sessions,
+    sessionLogs,
+    completedMicroTopicIds,
+    totalLiquidSeconds,
+    notesByTopic: {},
+    disciplineLinks,
+    dailyQuestionsProgress,
+  };
+
+  const handleApplyDriveSync = (syncedData: AppBackupData, message: string) => {
+    onRestoreBackup(syncedData);
+    setRestoreStatus({
+      type: 'success',
+      message,
+    });
+  };
 
   const handleDownloadBackup = () => {
     exportBackupData(
@@ -146,6 +168,12 @@ export const BackupView: React.FC<BackupViewProps> = ({
           <span className="text-xs sm:text-sm font-medium">{restoreStatus.message}</span>
         </div>
       )}
+
+      {/* Sincronização Google Drive (Nuvem) */}
+      <DriveSyncPanel
+        currentBackupData={currentBackupData}
+        onApplySyncData={handleApplyDriveSync}
+      />
 
       {/* Backup and Restore Action Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
