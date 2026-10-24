@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { BookmarkCheck } from 'lucide-react';
 import { Header } from './components/Header';
 import { ScheduleView } from './components/ScheduleView';
 import { DailyQuestionsView } from './components/DailyQuestionsView';
@@ -39,9 +40,19 @@ import {
   fetchGoogleDriveDataViaJsonp,
 } from './utils/driveSync';
 import { generateInitialSchedule } from './utils/scheduleGenerator';
+import {
+  AppTab,
+  getStoredNavigationState,
+  saveStoredNavigationState,
+  saveTabScrollPosition,
+  getTabScrollPosition,
+} from './utils/navigationState';
 
 export default function App() {
-  const [currentTab, setCurrentTab] = useState<'schedule' | 'reta_final' | 'questoes_diarias' | 'pareto' | 'timer' | 'backup'>('schedule');
+  // Navigation memory: loads the exact tab and state from last session
+  const initialNav = useMemo(() => getStoredNavigationState(), []);
+  const [currentTab, setCurrentTab] = useState<AppTab>(() => initialNav.currentTab || 'schedule');
+  const [resumeNotification, setResumeNotification] = useState<string | null>(null);
 
   // Persistence States
   const [sessions, setSessions] = useState<StudySession[]>(() => getStoredSessions());
@@ -59,11 +70,25 @@ export default function App() {
     getStoredDailyQuestions()
   );
 
-  // Timer States
-  const [isTimerModalOpen, setIsTimerModalOpen] = useState(false);
-  const [isTimerRunning, setIsTimerRunning] = useState(false);
-  const [timerElapsedSeconds, setTimerElapsedSeconds] = useState(0);
-  const [activeTimerSession, setActiveTimerSession] = useState<StudySession | null>(null);
+  // Timer States with persistent recovery (maintains active session and elapsed stopwatch)
+  const [isTimerModalOpen, setIsTimerModalOpen] = useState(() => Boolean(initialNav.isTimerModalOpen));
+  const [isTimerRunning, setIsTimerRunning] = useState(() => Boolean(initialNav.isTimerRunning));
+  const [timerElapsedSeconds, setTimerElapsedSeconds] = useState(() => {
+    if (!initialNav.timerElapsedSeconds) return 0;
+    if (initialNav.isTimerRunning && initialNav.timerSavedAtTimestamp) {
+      const awaySeconds = Math.floor((Date.now() - initialNav.timerSavedAtTimestamp) / 1000);
+      return initialNav.timerElapsedSeconds + Math.min(Math.max(awaySeconds, 0), 4 * 3600);
+    }
+    return initialNav.timerElapsedSeconds;
+  });
+  const [activeTimerSession, setActiveTimerSession] = useState<StudySession | null>(() => {
+    if (initialNav.activeTimerSessionId) {
+      const stored = getStoredSessions();
+      const found = stored.find((s) => s.id === initialNav.activeTimerSessionId);
+      if (found) return found;
+    }
+    return null;
+  });
 
   // Interval ref for timer
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -84,6 +109,99 @@ export default function App() {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     };
   }, [isTimerRunning]);
+
+  // Show discreet toast when resuming previous session position
+  useEffect(() => {
+    if (initialNav.lastSavedAt) {
+      const tabNames: Record<AppTab, string> = {
+        schedule: 'Cronograma Geral',
+        reta_final: 'Reta Final',
+        questoes_diarias: 'Questões Diárias',
+        pareto: 'Camadas 80/20',
+        timer: 'Métricas & Timer',
+        backup: 'Backup & Google Drive',
+      };
+      const name = tabNames[initialNav.currentTab] || 'sua última sessão';
+      setResumeNotification(`Você voltou exatamente onde parou (${name})`);
+      const timer = setTimeout(() => setResumeNotification(null), 3800);
+      return () => clearTimeout(timer);
+    }
+  }, [initialNav]);
+
+  // Persist current tab whenever it changes
+  useEffect(() => {
+    saveStoredNavigationState({ currentTab });
+  }, [currentTab]);
+
+  // Persist timer state
+  useEffect(() => {
+    saveStoredNavigationState({
+      isTimerModalOpen,
+      isTimerRunning,
+      timerElapsedSeconds,
+      activeTimerSessionId: activeTimerSession?.id || null,
+      timerSavedAtTimestamp: Date.now(),
+    });
+  }, [isTimerModalOpen, isTimerRunning, timerElapsedSeconds, activeTimerSession]);
+
+  // Track and save scroll position throttled
+  useEffect(() => {
+    let scrollTimeout: NodeJS.Timeout | null = null;
+    const handleScroll = () => {
+      if (scrollTimeout) return;
+      scrollTimeout = setTimeout(() => {
+        saveTabScrollPosition(currentTab, window.scrollY);
+        scrollTimeout = null;
+      }, 150);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (scrollTimeout) clearTimeout(scrollTimeout);
+    };
+  }, [currentTab]);
+
+  // Restore scroll position when tab changes
+  useEffect(() => {
+    const targetScroll = getTabScrollPosition(currentTab);
+    if (targetScroll > 0) {
+      const timer = setTimeout(() => {
+        window.scrollTo({ top: targetScroll, behavior: 'instant' as ScrollBehavior });
+      }, 60);
+      return () => clearTimeout(timer);
+    }
+  }, [currentTab]);
+
+  // Save current navigation and scroll state on page exit / visibility change
+  useEffect(() => {
+    const handleSaveOnExit = () => {
+      saveTabScrollPosition(currentTab, window.scrollY);
+      saveStoredNavigationState({
+        currentTab,
+        isTimerModalOpen,
+        isTimerRunning,
+        timerElapsedSeconds,
+        activeTimerSessionId: activeTimerSession?.id || null,
+        timerSavedAtTimestamp: Date.now(),
+      });
+    };
+
+    window.addEventListener('beforeunload', handleSaveOnExit);
+    window.addEventListener('pagehide', handleSaveOnExit);
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        handleSaveOnExit();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleSaveOnExit);
+      window.removeEventListener('pagehide', handleSaveOnExit);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [currentTab, isTimerModalOpen, isTimerRunning, timerElapsedSeconds, activeTimerSession]);
 
   // Synchronize storage whenever sessions change
   const handleUpdateSessions = useCallback((newSessions: StudySession[]) => {
@@ -566,6 +684,30 @@ export default function App() {
         activeSession={activeTimerSession}
         availableSessions={sessions}
       />
+
+      {/* Toast Informativo de Retomada de Sessão */}
+      {resumeNotification && (
+        <aside
+          role="status"
+          aria-live="polite"
+          className="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl bg-slate-900/95 border border-emerald-500/40 text-white shadow-2xl backdrop-blur-md animate-in fade-in slide-in-from-bottom-3 duration-300"
+        >
+          <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+            <BookmarkCheck className="w-4 h-4" />
+          </div>
+          <div>
+            <p className="text-xs font-bold text-emerald-300">Posição Restaurada</p>
+            <p className="text-[11px] text-slate-300">{resumeNotification}</p>
+          </div>
+          <button
+            onClick={() => setResumeNotification(null)}
+            className="text-slate-400 hover:text-white text-xs p-1 ml-2 cursor-pointer transition-colors"
+            title="Fechar"
+          >
+            ✕
+          </button>
+        </aside>
+      )}
 
       {/* Footer */}
       <footer className="border-t border-slate-900 bg-slate-950/80 py-4 text-center text-xs text-slate-500">

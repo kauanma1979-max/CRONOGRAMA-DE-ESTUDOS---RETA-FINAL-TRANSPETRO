@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { DisciplineId, Temperature } from '../types';
 import { DISCIPLINES, MESO_TOPICS, MICRO_TOPICS } from '../data/paretoData';
+import { getStoredNavigationState, saveStoredNavigationState } from '../utils/navigationState';
 
 interface ParetoExplorerProps {
   completedMicroTopicIds: string[];
@@ -27,10 +28,25 @@ export const ParetoExplorer: React.FC<ParetoExplorerProps> = ({
   onToggleMicroTopic,
   onLaunchTopicTimer,
 }) => {
-  const [activeLayer, setActiveLayer] = useState<'all' | 'camada1' | 'camada2' | 'camada3'>('all');
-  const [selectedDiscipline, setSelectedDiscipline] = useState<DisciplineId | 'all'>('all');
+  const savedNav = getStoredNavigationState();
+  const [activeLayer, setActiveLayer] = useState<'all' | 'camada1' | 'camada2' | 'camada3'>(
+    () => savedNav.paretoActiveLayer || 'all'
+  );
+  const [selectedDiscipline, setSelectedDiscipline] = useState<DisciplineId | 'all'>(
+    () => (savedNav.paretoDiscipline as any) || 'all'
+  );
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterTemperature, setFilterTemperature] = useState<Temperature | 'all'>('all');
+  const [filterTemperature, setFilterTemperature] = useState<Temperature | 'all'>(
+    () => (savedNav.paretoTemperature as any) || 'all'
+  );
+
+  React.useEffect(() => {
+    saveStoredNavigationState({
+      paretoActiveLayer: activeLayer,
+      paretoDiscipline: selectedDiscipline,
+      paretoTemperature: filterTemperature,
+    });
+  }, [activeLayer, selectedDiscipline, filterTemperature]);
 
   // Filtered Camada 1 disciplines
   const filteredDisciplines = useMemo(() => {

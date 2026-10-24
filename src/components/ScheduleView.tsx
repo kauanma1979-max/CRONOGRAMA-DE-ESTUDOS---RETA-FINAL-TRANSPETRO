@@ -37,6 +37,7 @@ import {
   RETA_FINAL_CONFIG,
 } from '../utils/scheduleGenerator';
 import { DisciplineLinkModal } from './DisciplineLinkModal';
+import { getStoredNavigationState, saveStoredNavigationState } from '../utils/navigationState';
 
 interface ScheduleViewProps {
   sessions: StudySession[];
@@ -78,19 +79,45 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
 
   const todayStr = useMemo(() => getTodayDateStr(), []);
 
-  // Selected date state (defaults to today if in range, otherwise first date: 2026-09-21)
+  // Selected date state with persistent memory
+  const savedNav = getStoredNavigationState();
   const [selectedDate, setSelectedDate] = useState<string>(() => {
-    if (initialViewMode === 'reta_final') return '2026-11-28';
+    if (initialViewMode === 'reta_final') {
+      if (savedNav.scheduleSelectedDate && RETA_FINAL_DATES.includes(savedNav.scheduleSelectedDate)) {
+        return savedNav.scheduleSelectedDate;
+      }
+      return '2026-11-28';
+    }
+    if (savedNav.scheduleSelectedDate && uniqueDates.includes(savedNav.scheduleSelectedDate)) {
+      return savedNav.scheduleSelectedDate;
+    }
     const today = getTodayDateStr();
     if (uniqueDates.includes(today)) return today;
     return uniqueDates[0] || '2026-09-21';
   });
-  const [viewMode, setViewMode] = useState<'daily' | 'weekly' | 'reta_final'>(
-    initialViewMode || 'daily'
+
+  const [viewMode, setViewMode] = useState<'daily' | 'weekly' | 'reta_final'>(() => {
+    if (initialViewMode) return initialViewMode;
+    return savedNav.scheduleViewMode || 'daily';
+  });
+
+  const [filterDiscipline, setFilterDiscipline] = useState<DisciplineId | 'all'>(
+    () => (savedNav.scheduleFilterDiscipline as any) || 'all'
   );
-  const [filterDiscipline, setFilterDiscipline] = useState<DisciplineId | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [retaFinalLayout, setRetaFinalLayout] = useState<'single_day' | 'all_days'>('single_day');
+  const [retaFinalLayout, setRetaFinalLayout] = useState<'single_day' | 'all_days'>(
+    () => savedNav.retaFinalLayout || 'single_day'
+  );
+
+  // Synchronize changes to navigation state
+  useEffect(() => {
+    saveStoredNavigationState({
+      scheduleSelectedDate: selectedDate,
+      scheduleViewMode: viewMode,
+      scheduleFilterDiscipline: filterDiscipline,
+      retaFinalLayout: retaFinalLayout,
+    });
+  }, [selectedDate, viewMode, filterDiscipline, retaFinalLayout]);
   const [modalTopicKey, setModalTopicKey] = useState<string | null>(null);
   const [modalTopicTitle, setModalTopicTitle] = useState<string>('');
   const [modalDisciplineId, setModalDisciplineId] = useState<DisciplineId | null>(null);

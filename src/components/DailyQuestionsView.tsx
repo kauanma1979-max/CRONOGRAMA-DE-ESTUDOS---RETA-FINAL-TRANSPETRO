@@ -29,6 +29,7 @@ import {
 } from '../data/dailyQuestionsScheduleData';
 import { DailyQuestionsState, DisciplineLinks, DisciplineLink, DisciplineId } from '../types';
 import { DisciplineLinkModal } from './DisciplineLinkModal';
+import { getStoredNavigationState, saveStoredNavigationState } from '../utils/navigationState';
 
 interface DailyQuestionsViewProps {
   dailyQuestionsState: DailyQuestionsState;
@@ -45,13 +46,33 @@ export const DailyQuestionsView: React.FC<DailyQuestionsViewProps> = ({
   onSaveDisciplineLink,
   onDeleteDisciplineLink,
 }) => {
-  // Navigation & View Mode
-  const [viewMode, setViewMode] = useState<'all' | 'single'>('all');
-  const [focusedDay, setFocusedDay] = useState<number>(1);
-  const [selectedDiscipline, setSelectedDiscipline] = useState<'all' | DisciplineId>('all');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed'>('all');
+  // Navigation & View Mode with persistent memory
+  const savedNav = getStoredNavigationState();
+  const [viewMode, setViewMode] = useState<'all' | 'single'>(
+    () => savedNav.dailyQuestionsViewMode || 'all'
+  );
+  const [focusedDay, setFocusedDay] = useState<number>(() => {
+    const d = savedNav.dailyQuestionsFocusedDay;
+    return typeof d === 'number' && d >= 1 && d <= TOTAL_SCHEDULE_DAYS ? d : 1;
+  });
+  const [selectedDiscipline, setSelectedDiscipline] = useState<'all' | DisciplineId>(
+    () => (savedNav.dailyQuestionsDiscipline as any) || 'all'
+  );
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed'>(
+    () => savedNav.dailyQuestionsStatusFilter || 'all'
+  );
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [confirmResetOpen, setConfirmResetOpen] = useState(false);
+
+  // Synchronize navigation changes to storage
+  React.useEffect(() => {
+    saveStoredNavigationState({
+      dailyQuestionsViewMode: viewMode,
+      dailyQuestionsFocusedDay: focusedDay,
+      dailyQuestionsDiscipline: selectedDiscipline,
+      dailyQuestionsStatusFilter: statusFilter,
+    });
+  }, [viewMode, focusedDay, selectedDiscipline, statusFilter]);
 
   // Link modal state
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);

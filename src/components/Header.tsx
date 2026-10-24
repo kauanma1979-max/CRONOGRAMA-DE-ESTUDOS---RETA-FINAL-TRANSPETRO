@@ -11,6 +11,7 @@ import {
   Flame,
   CheckSquare,
   Cloud,
+  BookmarkCheck,
 } from 'lucide-react';
 import { formatSecondsToDigital } from '../utils/scheduleGenerator';
 
@@ -148,6 +149,15 @@ export const Header: React.FC<HeaderProps> = ({
               <Cloud className="w-3.5 h-3.5 text-blue-400" />
               <span className="hidden sm:inline">Drive Sync</span>
             </button>
+
+            {/* Persistent State Indicator */}
+            <div
+              className="hidden lg:flex items-center gap-1.5 px-2 py-1 rounded-xl bg-slate-800/80 border border-slate-700/60 text-[11px] text-slate-300 select-none"
+              title="O app salva automaticamente a aba, o dia, os filtros, a rolagem e o cronômetro para você voltar exatamente onde parou"
+            >
+              <BookmarkCheck className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="text-emerald-400 font-bold">Auto-Salvo</span>
+            </div>
           </div>
         </div>
 
